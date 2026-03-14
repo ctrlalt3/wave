@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOUNDDROP — Music Downloader</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="static/css/style.css">
+</head>
+
+<body>
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="container">
+    <header>
+      <div class="logo">SOUNDDROP</div>
+      <p class="tagline">Multi-Platform Music Downloader</p>
+    </header>
+
+    <div class="card">
+
+      <!-- ── Platform Selector ── -->
+      <label class="platform-label">Elige la plataforma</label>
+      <div class="platform-grid">
+
+        <button class="platform-btn active" data-platform="soundcloud" style="--plat-color: #ff5500"
+          onclick="selectPlatform('soundcloud')">
+          <span class="plat-icon">
+            <!-- SoundCloud SVG -->
+            <svg width="26" height="18" viewBox="0 0 1333 583" fill="#ff5500" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M0 421c0 89 72 162 161 162s161-73 161-162V236a8 8 0 0 0-8-8 8 8 0 0 0-8 8v185c0 80-65 145-145 145S16 501 16 421s65-145 145-145c16 0 31 3 46 8a8 8 0 0 0 10-5 8 8 0 0 0-5-10 161 161 0 0 0-212 152zM370 299v284h16V299a8 8 0 0 0-16 0zm64-64v348h16V235a8 8 0 0 0-16 0zm64 40v308h16V275a8 8 0 0 0-16 0zm64 24v284h16V299a8 8 0 0 0-16 0zm375-138c-11 0-22 1-33 4C886 74 812 0 720 0c-53 0-101 22-136 57a8 8 0 0 0 11 11c32-32 75-52 125-52 89 0 161 72 161 161v8a8 8 0 0 0 8 8c11-2 22-4 34-4 89 0 161 72 161 161s-72 161-161 161H562v16h361c98 0 177-79 177-177s-79-177-177-177z" />
+            </svg>
+          </span>
+          <span class="plat-name">SoundCloud</span>
+        </button>
+
+        <button class="platform-btn" data-platform="spotify" style="--plat-color: #1db954"
+          onclick="selectPlatform('spotify')">
+          <span class="plat-icon">
+            <!-- Spotify SVG -->
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="#1db954" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
+            </svg>
+          </span>
+          <span class="plat-name">Spotify</span>
+        </button>
+
+        <button class="platform-btn" data-platform="youtube" style="--plat-color: #ff0000"
+          onclick="selectPlatform('youtube')">
+          <span class="plat-icon">
+            <!-- YouTube SVG -->
+            <svg width="26" height="18" viewBox="0 0 576 512" fill="#ff0000" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M549.655 124.083c-6.281-23.65-24.787-42.276-48.284-48.597C458.781 64 288 64 288 64S117.22 64 74.629 75.486c-23.497 6.322-42.003 24.947-48.284 48.597-11.412 42.867-11.412 132.305-11.412 132.305s0 89.438 11.412 132.305c6.281 23.65 24.787 41.5 48.284 47.821C117.22 448 288 448 288 448s170.78 0 213.371-11.486c23.497-6.321 42.003-24.171 48.284-47.821 11.412-42.867 11.412-132.305 11.412-132.305s0-89.438-11.412-132.305zm-317.51 213.508V175.185l142.739 81.205-142.739 81.201z" />
+            </svg>
+          </span>
+          <span class="plat-name">YouTube</span>
+        </button>
+
+        <button class="platform-btn" data-platform="youtubemusic" style="--plat-color: #ff0000"
+          onclick="selectPlatform('youtubemusic')">
+          <span class="plat-icon">
+            <!-- YouTube Music icon via note emoji -->
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="#ff0000" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M12 0C5.376 0 0 5.376 0 12s5.376 12 12 12 12-5.376 12-12S18.624 0 12 0zm0 19.104c-3.924 0-7.104-3.18-7.104-7.104S8.076 4.896 12 4.896s7.104 3.18 7.104 7.104-3.18 7.104-7.104 7.104zm0-12.6c-3.036 0-5.496 2.46-5.496 5.496s2.46 5.496 5.496 5.496 5.496-2.46 5.496-5.496-2.46-5.496-5.496-5.496zm0 8.424a2.928 2.928 0 1 1 0-5.856 2.928 2.928 0 0 1 0 5.856z" />
+            </svg>
+          </span>
+          <span class="plat-name">YT Music</span>
+        </button>
+
+        <button class="platform-btn" data-platform="applemusic" style="--plat-color: #fc3c44"
+          onclick="selectPlatform('applemusic')">
+          <span class="plat-icon">
+            <!-- Apple Music -->
+            <svg width="22" height="24" viewBox="0 0 24 24" fill="#fc3c44" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M23.994 6.124a9.23 9.23 0 0 0-.24-2.19c-.317-1.31-1.062-2.31-2.18-3.043a5.022 5.022 0 0 0-1.877-.726 10.496 10.496 0 0 0-1.564-.15c-.04-.003-.083-.01-.124-.013H5.986c-.152.01-.303.017-.455.026C4.786.07 4.043.15 3.34.428 2.004.958 1.04 1.88.475 3.208a4.92 4.92 0 0 0-.369 1.61c-.06.57-.084 1.143-.086 1.715v9.94c.002.562.023 1.123.08 1.682.198 1.88 1.187 3.229 2.902 4.022.657.303 1.354.437 2.07.466.955.04 1.91.042 2.866.042h5.07c.955 0 1.91-.002 2.866-.042.716-.029 1.413-.163 2.07-.466 1.715-.793 2.704-2.142 2.902-4.022.057-.56.078-1.12.08-1.682V6.53c-.002-.135-.007-.27-.012-.406zM12.03 5.474a3.03 3.03 0 0 1 .594-.06c.265 0 .523.043.769.13l-4.7 1.49v5.58a2.404 2.404 0 0 1-.72 1.67 2.38 2.38 0 0 1-1.68.68 2.38 2.38 0 0 1-2.37-2.38 2.38 2.38 0 0 1 2.37-2.38c.37 0 .72.086 1.03.24v-4.64l5.71-1.81-.004 8.42a2.39 2.39 0 0 1-.72 1.68 2.38 2.38 0 0 1-1.68.68 2.38 2.38 0 0 1-2.37-2.38 2.38 2.38 0 0 1 2.37-2.38c.37 0 .72.085 1.03.24V5.474z" />
+            </svg>
+          </span>
+          <span class="plat-name">Apple Music</span>
+        </button>
+
+        <button class="platform-btn" data-platform="deezer" style="--plat-color: #a238ff"
+          onclick="selectPlatform('deezer')">
+          <span class="plat-icon">
+            <!-- Deezer waveform icon -->
+            <svg width="26" height="20" viewBox="0 0 32 20" fill="#a238ff" xmlns="http://www.w3.org/2000/svg">
+              <rect x="0" y="8" width="4" height="12" rx="2" />
+              <rect x="7" y="4" width="4" height="16" rx="2" />
+              <rect x="14" y="0" width="4" height="20" rx="2" />
+              <rect x="21" y="4" width="4" height="16" rx="2" />
+              <rect x="28" y="8" width="4" height="12" rx="2" />
+            </svg>
+          </span>
+          <span class="plat-name">Deezer</span>
+        </button>
+
+      </div>
+
+      <!-- Spotify credential note -->
+      <div id="spotifyNote"
+        style="display:none; align-items:center; gap:8px; background:rgba(29,185,84,0.07); border:1px solid rgba(29,185,84,0.25); border-radius:10px; padding:10px 14px; margin-bottom:20px; font-family:'Space Mono',monospace; font-size:10px; color:#1db954; letter-spacing:.5px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1db954" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        Spotify requiere credenciales configuradas en el servidor (spotdl auth).
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- ── URL Input ── -->
+      <label class="input-label" for="urlInput">Pega la URL</label>
+      <div class="input-row">
+        <input id="urlInput" class="url-input" type="url" placeholder="https://soundcloud.com/artista/cancion"
+          autocomplete="off" />
+        <button class="btn-download" id="btnDownload" onclick="startDownload()">▶ DESCARGAR</button>
+      </div>
+
+      <div class="status-panel" id="statusPanel">
+        <div class="status-bar-bg">
+          <div class="status-bar-fill indeterminate" id="statusBar"></div>
+        </div>
+        <div class="status-text">
+          <span class="dot" id="statusDot"></span>
+          <span id="statusMsg">Iniciando descarga...</span>
+        </div>
+      </div>
+
+      <div class="error-box" id="errorBox"></div>
+
+      <!-- ── Files section ── -->
+      <div class="files-section" id="filesSection" style="display:none">
+        <div class="files-header">
+          <p class="files-title">✓ Archivos listos</p>
+          <button class="btn-download-all" id="btnDownloadAll" onclick="downloadAll()">
+            <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              <line x1="12" y1="11" x2="12" y2="17" />
+              <polyline points="9 14 12 17 15 14" />
+            </svg>
+            <span class="spinner"></span>
+            Elegir carpeta y descargar todo
+          </button>
+        </div>
+
+        <div class="folder-badge" id="folderBadge">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+          </svg>
+          <span id="folderName">—</span>
+        </div>
+
+        <div class="folder-hint" id="folderHint" style="display:none">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          Tu navegador no soporta selección de carpeta. Los archivos se guardarán en tu carpeta de Descargas.
+        </div>
+        <div id="fileList"></div>
+      </div>
+    </div>
+
+    <div class="waveform">
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+    </div>
+
+    <p class="note">
+      Compatible con <span class="sc-logo">SoundCloud</span> · <span class="sp-logo">Spotify</span> · <span
+        class="yt-logo">YouTube</span> · Apple Music · Deezer<br />
+      Los archivos se descargan en MP3 directamente desde el servidor.
+    </p>
+  </div>
+  <script src="static/js/script.js"></script>
+</body>
+
+</html>

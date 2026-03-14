@@ -1,0 +1,12 @@
+downloads/
+*.mp3
+*.flac
+*.ogg
+*.wav
+*.m4a
+__pycache__/
+*.pyc
+*.log
+metadata_cache.json
+play_stats.json
+.env
