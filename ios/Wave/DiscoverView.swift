@@ -25,7 +25,6 @@ struct DiscoverSession: Identifiable {
 }
 
 struct DiscoverSection: View {
-    @Environment(\.waveLayout) private var layout
     var api: WaveAPI? = nil
     var serverFolders: [WaveFolder] = []
     @EnvironmentObject private var local: LocalLibrary
@@ -51,7 +50,7 @@ struct DiscoverSection: View {
                         ForEach(folders, id: \.self) { folder in
                             Text(folder).tag(folder)
                         }
-                    }.pickerStyle(.wheel).frame(height: layout.compactHeader ? 96 : 140).clipped()
+                    }.pickerStyle(.wheel).frame(height: 140).clipped()
                         .sensoryFeedback(.selection, trigger: selected)
                         .accessibilityLabel("Carpeta para descubrir")
                     Button { Task { await open() } } label: {
@@ -131,9 +130,6 @@ struct DiscoverFeed: View {
                             .offset(x: reduceMotion ? 0 : max(-28, min(28, drag.width * 0.15)), y: reduceMotion ? 0 : max(-28, min(28, drag.height * 0.15)))
                         LinearGradient(colors: [.black.opacity(0.65), .clear, .black.opacity(0.9)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
                         (drag.width > 0 ? Color.green : Color.red).opacity(abs(drag.width) > abs(drag.height) ? min(0.35, abs(drag.width) / 500) : 0).ignoresSafeArea().allowsHitTesting(false)
-                        if geometry.size.width > geometry.size.height {
-                            landscapeControls(song, size: geometry.size)
-                        } else {
                         ViewThatFits(in: .vertical) {
                         VStack(spacing: 16) {
                             HStack {
@@ -184,7 +180,6 @@ struct DiscoverFeed: View {
                         }.padding(.horizontal, 22).padding(.bottom, 24).foregroundStyle(.white).buttonStyle(.plain)
                             compactControls(song)
                         }
-                        }
                     } else {
                         VStack(spacing: 20) {
                             HStack { Text("Descubre").font(.title2.weight(.bold)); Spacer(); close }
@@ -197,7 +192,7 @@ struct DiscoverFeed: View {
                             Spacer()
                         }.padding(22)
                     }
-                }.contentShape(Rectangle()).gesture(swipe, including: geometry.size.width > geometry.size.height ? .subviews : .all)
+                }.contentShape(Rectangle()).gesture(swipe)
                     .accessibilityAction(named: "Descartar") { advance() }
                     .accessibilityAction(named: "Guardar en Me gusta") { if let song { Task { await save(song) } } }
             }.overlay(alignment: .top) {
@@ -269,17 +264,6 @@ struct DiscoverFeed: View {
             index = position
         } else { index = min(index, remaining.count) }
         songs = remaining
-    }
-    private func landscapeControls(_ song: PlaybackSong, size: CGSize) -> some View {
-        HStack(spacing: 12) {
-            WaveArtwork(size: max(100, min(size.height - 32, size.width * 0.34)), artwork: song.mediaItem?.artwork, remoteURL: song.coverURL, audioURL: song.source == "local" ? song.url : nil)
-                .clipShape(RoundedRectangle(cornerRadius: 20)).contentShape(Rectangle()).gesture(swipe)
-                .accessibilityLabel("Portada. Desliza para guardar o descartar")
-            ScrollView {
-                compactControls(song)
-                    .background(.black.opacity(0.5), in: RoundedRectangle(cornerRadius: 20))
-            }.frame(maxWidth: .infinity)
-        }.padding(16)
     }
     private func compactControls(_ song: PlaybackSong) -> some View {
         VStack(spacing: 8) {

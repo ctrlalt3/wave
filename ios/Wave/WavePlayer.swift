@@ -26,26 +26,13 @@ final class WavePlaybackProgress: ObservableObject {
 
 @MainActor
 final class WavePlayer: ObservableObject {
-    static let shared = WavePlayer()
-    var lastWidgetPublication = Date.distantPast
-    var widgetLocalCount = 0
-    var widgetFavoritesCount = 0
-    var widgetPlaylistsCount = 0
-    var widgetCurrentLiked = false
-    var widgetArtworkFilename: String?
-    var persistedWidgetQueue: [String] = []
-    var persistedWidgetCurrentID: String?
-    var widgetSavedSongs: [WaveSavedPlaybackSong] = []
-    var choosingWidgetSong = false
-    var restoringWidgetPlayback = false
-    var widgetPreferencesOwner: LibraryPreferences?
     @Published private(set) var current: PlaybackSong? {
         didSet {
             if oldValue?.id != current?.id { loadNowPlayingArtwork() }
             updateRemoteLike()
         }
     }
-    @Published private(set) var playing = false { didSet { if oldValue != playing { publishWidgetSnapshot(force: true) } } }
+    @Published private(set) var playing = false
     let progress = WavePlaybackProgress()
     var elapsed: Double {
         get { progress.elapsed }
@@ -57,12 +44,12 @@ final class WavePlayer: ObservableObject {
     }
     @Published private(set) var queue: [PlaybackSong] = []
     @Published var shuffle = false {
-        didSet { if current?.mediaItem != nil { music.shuffleMode = shuffle ? .songs : .off }; if oldValue != shuffle { publishWidgetSnapshot(force: true) } }
+        didSet { if current?.mediaItem != nil { music.shuffleMode = shuffle ? .songs : .off } }
     }
     @Published var repeatQueue = false {
-        didSet { if current?.mediaItem != nil { music.repeatMode = repeatQueue ? .all : .none }; if oldValue != repeatQueue { publishWidgetSnapshot(force: true) } }
+        didSet { if current?.mediaItem != nil { music.repeatMode = repeatQueue ? .all : .none } }
     }
-    @Published var error: String? { didSet { if oldValue != error { publishWidgetSnapshot(force: true) } } }
+    @Published var error: String?
     private let player = AVPlayer()
     private lazy var music = MPMusicPlayerController.applicationQueuePlayer
     private var deviceNotificationsStarted = false
@@ -87,7 +74,6 @@ final class WavePlayer: ObservableObject {
             let length = self.player.currentItem?.duration.seconds ?? 0
             if length.isFinite && length > 0 { self.duration = length }
             self.updateNowPlaying()
-            self.publishWidgetSnapshot()
         }
         player.publisher(for: \.timeControlStatus)
             .receive(on: DispatchQueue.main)
@@ -173,7 +159,7 @@ final class WavePlayer: ObservableObject {
         } catch { self.error = error.localizedDescription }
     }
 
-    func play(_ song: PlaybackSong, queue: [PlaybackSong], autoPlay: Bool = true) {
+    func play(_ song: PlaybackSong, queue: [PlaybackSong]) {
         seekGeneration += 1; seeking = false
         player.currentItem?.cancelPendingSeeks()
         do {
@@ -189,7 +175,6 @@ final class WavePlayer: ObservableObject {
                 elapsed = 0
                 duration = song.track.duration
                 error = nil
-                publishWidgetSnapshot(force: true)
                 if !deviceNotificationsStarted { music.beginGeneratingPlaybackNotifications(); deviceNotificationsStarted = true }
                 music.setQueue(with: MPMediaItemCollection(items: self.queue.compactMap(\.mediaItem)))
                 music.nowPlayingItem = item
@@ -200,7 +185,7 @@ final class WavePlayer: ObservableObject {
                     Task { @MainActor in
                         guard let self, self.current?.id == song.id else { return }
                         if let message { self.error = "No se pudo reproducir desde Música: \(message)" }
-                        else { if autoPlay { self.music.play() }; self.syncDevicePlayback(); self.publishWidgetSnapshot(force: true) }
+                        else { self.music.play(); self.syncDevicePlayback() }
                     }
                 }
                 return
@@ -224,9 +209,8 @@ final class WavePlayer: ObservableObject {
                 }
             }
             player.replaceCurrentItem(with: item)
-            if autoPlay { player.play() } else { player.pause(); playing = false }
+            player.play()
             updateNowPlaying()
-            publishWidgetSnapshot(force: true)
         } catch { self.error = error.localizedDescription }
     }
 
@@ -270,7 +254,6 @@ final class WavePlayer: ObservableObject {
             }
         }
         updateNowPlaying()
-        publishWidgetSnapshot(force: true)
     }
 
     func enqueue(_ song: PlaybackSong, next: Bool) {
@@ -283,7 +266,6 @@ final class WavePlayer: ObservableObject {
         if next, let index = queue.firstIndex(where: { $0.id == current.id }) {
             queue.insert(song, at: index + 1)
         } else { queue.append(song) }
-        publishWidgetSnapshot(force: true)
         if let item = song.mediaItem {
             let items = MPMediaItemCollection(items: [item])
             let descriptor = MPMusicPlayerMediaItemQueueDescriptor(itemCollection: items)
@@ -310,7 +292,6 @@ final class WavePlayer: ObservableObject {
 
     func connectFavorites(_ preferences: LibraryPreferences) {
         guard self.preferences !== preferences else { return }
-        if widgetPreferencesOwner !== preferences { widgetPreferencesOwner = nil }
         self.preferences = preferences
         favoritesObservation = preferences.$state.combineLatest(preferences.$ready, preferences.$pendingLikes)
             .receive(on: DispatchQueue.main)
@@ -318,36 +299,20 @@ final class WavePlayer: ObservableObject {
         updateRemoteLike()
     }
 
-    func widgetLikePreferences() async -> LibraryPreferences {
-        if let preferences {
-            if !preferences.ready { await preferences.load() }
-            return preferences
-        }
-        let value = LibraryPreferences(); await value.load()
-        widgetPreferencesOwner = value; connectFavorites(value)
-        return value
-    }
-
     private func updateRemoteLike() {
         let command = MPRemoteCommandCenter.shared().likeCommand
         let liked = current.map { preferences?.liked($0.id) == true } ?? false
-        let changed = widgetCurrentLiked != liked
-        widgetCurrentLiked = liked
         command.isActive = liked
         command.localizedTitle = liked ? "Quitar Me gusta" : "Me gusta"
         command.localizedShortTitle = command.localizedTitle
         command.isEnabled = current.map {
             preferences?.ready == true && preferences?.pendingLikes.contains($0.id) == false
         } ?? false
-        if changed { publishWidgetSnapshot(force: true) }
     }
 
     private func loadNowPlayingArtwork() {
         artworkTask?.cancel()
         nowPlayingArtwork = current?.mediaItem?.artwork
-        widgetArtworkFilename = nil
-        cacheWidgetArtwork(nowPlayingArtwork)
-        publishWidgetSnapshot(force: true)
         // Clear the previous track's artwork immediately, before any network request.
         updateNowPlaying()
         guard let song = current, song.mediaItem == nil else { return }
@@ -356,7 +321,6 @@ final class WavePlayer: ObservableObject {
                 audio: song.source == "local" ? song.url : nil)
             guard !Task.isCancelled, let self, self.current?.id == song.id, let image else { return }
             self.nowPlayingArtwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-            self.cacheWidgetArtwork(self.nowPlayingArtwork)
             self.updateNowPlaying()
         }
     }
