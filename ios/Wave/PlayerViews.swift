@@ -98,7 +98,7 @@ struct ExpandedPlayer: View {
                             Spacer()
                             LikeButton(song: song)
                         }
-                        WavePlaybackSeekBar(song: song)
+                        WaveformSeekBar(song: song)
                         transport
                         if let error = player.error { Text(error).font(.caption).foregroundStyle(.red) }
                     }.padding(.vertical, 12).listRowBackground(WaveTheme.surface)
@@ -117,7 +117,7 @@ struct ExpandedPlayer: View {
             }.waveLibraryStyle()
     }
     private func landscapePlayer(_ song: PlaybackSong, size: CGSize) -> some View {
-        let artworkSize = max(100, min(size.width * 0.26, size.height - 24, 220))
+        let artworkSize = max(120, min(size.width * 0.34, size.height - 24, 360))
         return HStack(spacing: 20) {
             VStack {
                 Spacer(minLength: 0)
@@ -137,7 +137,7 @@ struct ExpandedPlayer: View {
                         }.frame(maxWidth: .infinity, alignment: .leading)
                         LikeButton(song: song, compact: true)
                     }
-                    WavePlaybackSeekBar(song: song)
+                    WaveformSeekBar(song: song)
                     transport
                     if let error = player.error { Text(error).font(.caption).foregroundStyle(.red) }
                     Text("Cola de reproducción · \(player.queue.count)").font(.subheadline.weight(.semibold)).padding(.top, 8)
@@ -202,34 +202,18 @@ struct ExpandedPlayer: View {
             }
     }
     private var transport: some View {
-        ViewThatFits(in: .horizontal) {
-            transportRow(spacing: 16, playSize: 64)
-            transportRow(spacing: 8, playSize: 56)
-            VStack(spacing: 8) {
-                HStack(spacing: 12) { previousButton; playButton(size: 56); nextButton }
-                HStack(spacing: 16) { shuffleButton; repeatButton }
-            }
-        }.frame(maxWidth: .infinity, alignment: .center).font(.title3).buttonStyle(.plain)
+        HStack {
+            Button { player.shuffle.toggle() } label: { Image(systemName: "shuffle").foregroundStyle(player.shuffle ? WaveTheme.accent : WaveTheme.secondary).frame(width: 44, height: 44) }.accessibilityLabel("Aleatorio")
+            Spacer(minLength: 4)
+            Button { player.previous() } label: { Image(systemName: "backward.end.fill").frame(width: 44, height: 44) }.accessibilityLabel("Anterior")
+            Spacer(minLength: 4)
+            Button { player.toggle() } label: { Image(systemName: player.playing ? "pause.fill" : "play.fill").foregroundStyle(.white).frame(width: 64, height: 64).background(WaveTheme.accent, in: Circle()) }.accessibilityLabel(player.playing ? "Pausar" : "Reproducir")
+            Spacer(minLength: 4)
+            Button { player.next() } label: { Image(systemName: "forward.end.fill").frame(width: 44, height: 44) }.accessibilityLabel("Siguiente")
+            Spacer(minLength: 4)
+            Button { player.repeatQueue.toggle() } label: { Image(systemName: "repeat").foregroundStyle(player.repeatQueue ? WaveTheme.accent : WaveTheme.secondary).frame(width: 44, height: 44) }.accessibilityLabel("Repetir cola")
+        }.font(.title3).buttonStyle(.plain)
     }
-    private func transportRow(spacing: CGFloat, playSize: CGFloat) -> some View {
-        HStack(spacing: spacing) { shuffleButton; previousButton; playButton(size: playSize); nextButton; repeatButton }
-    }
-    private var shuffleButton: some View {
-        Button { player.shuffle.toggle() } label: { Image(systemName: "shuffle").foregroundStyle(player.shuffle ? WaveTheme.accent : WaveTheme.secondary).frame(width: 44, height: 44) }.accessibilityLabel("Aleatorio")
-    }
-    private var previousButton: some View {
-        Button { player.previous() } label: { Image(systemName: "backward.end.fill").frame(width: 44, height: 44) }.accessibilityLabel("Anterior")
-    }
-    private func playButton(size: CGFloat) -> some View {
-        Button { player.toggle() } label: { Image(systemName: player.playing ? "pause.fill" : "play.fill").foregroundStyle(.white).frame(width: size, height: size).background(WaveTheme.accent, in: Circle()) }.accessibilityLabel(player.playing ? "Pausar" : "Reproducir")
-    }
-    private var nextButton: some View {
-        Button { player.next() } label: { Image(systemName: "forward.end.fill").frame(width: 44, height: 44) }.accessibilityLabel("Siguiente")
-    }
-    private var repeatButton: some View {
-        Button { player.repeatQueue.toggle() } label: { Image(systemName: "repeat").foregroundStyle(player.repeatQueue ? WaveTheme.accent : WaveTheme.secondary).frame(width: 44, height: 44) }.accessibilityLabel("Repetir cola")
-    }
-
 }
 
 

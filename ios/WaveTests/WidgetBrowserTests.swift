@@ -29,42 +29,6 @@ final class WidgetBrowserTests: XCTestCase {
         let upper = await service.navigate(.up, revision: back.state.revision)
         XCTAssertEqual(upper.state.folder, "Music")
     }
-    func testDockReadsLargerPagesAndCanOpenFoldersBeyondFirstSix() async throws {
-        let root = try temporaryRoot(), service = WaveWidgetBrowserService(root: root)
-        try await service.publishLocal(songs(count: 40), folders: ["Music/Album"])
-        var page = await service.snapshot()
-        page = await service.navigate(.folder, item: "Music", revision: page.state.revision, stride: 24)
-        page = await service.navigate(.folder, item: "Music/Album", revision: page.state.revision, stride: 24)
-        XCTAssertEqual(page.items.count, 24)
-        XCTAssertEqual(page.items.last?.id, "song-23")
-        page = await service.navigate(.nextPage, revision: page.state.revision, stride: 24)
-        XCTAssertEqual(page.state.offset, 24)
-        XCTAssertEqual(page.items.count, 16)
-        page = await service.navigate(.previousPage, revision: page.state.revision, stride: 24)
-        XCTAssertEqual(page.state.offset, 0)
-        let manyFolders = (0..<12).map { WaveWidgetBrowserItem(id: "file-\($0)", title: "Song", subtitle: "Artist", kind: .song, folderPath: "Genre/Playlist\($0)") }
-        try await service.publishLocal(manyFolders, folders: manyFolders.compactMap(\.folderPath))
-        page = await service.snapshot(rows: 24)
-        page = await service.navigate(.folder, item: "Genre", revision: page.state.revision, stride: 24)
-        XCTAssertEqual(page.items.count, 12)
-        let folder = try XCTUnwrap(page.items.last?.id)
-        page = await service.navigate(.folder, item: folder, revision: page.state.revision, stride: 24)
-        XCTAssertEqual(page.state.folder, folder)
-        XCTAssertEqual(page.items.count, 1)
-    }
-    func testHomeReturnsToRootWithoutChangingSource() async throws {
-        let root = try temporaryRoot(), service = WaveWidgetBrowserService(root: root)
-        try await service.publishLocal(songs(count: 20), folders: ["Music/Album"])
-        var page = await service.snapshot()
-        page = await service.navigate(.folder, item: "Music", revision: page.state.revision)
-        page = await service.navigate(.folder, item: "Music/Album", revision: page.state.revision)
-        page = await service.navigate(.nextPage, revision: page.state.revision, stride: 6)
-        page = await service.navigate(.home, revision: page.state.revision)
-        XCTAssertEqual(page.state.source, .local)
-        XCTAssertEqual(page.state.folder, "")
-        XCTAssertEqual(page.state.offset, 0)
-        XCTAssertEqual(page.items.map(\.id), ["Music"])
-    }
     func testTwoBrowsersShareStateAndStaleButtonsCannotJumpTwice() async throws {
         let root = try temporaryRoot(), first = WaveWidgetBrowserService(root: root), second = WaveWidgetBrowserService(root: root)
         try await first.publishLocal(songs(count: 3), folders: ["Music/Album"])

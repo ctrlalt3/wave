@@ -1,79 +1,4 @@
-# Wave para iPhone e iPad · 0.12.0 (build 27)
-
-## Scroll a pantalla completa, explorador grande y atenuación · 0.12.0
-
-- **Título y buscador se ocultan juntos** al bajar por una lista. Se observa el gesto de su `UIScrollView` nativo sin reemplazar su delegado ni añadir otro gesto de scroll. Al subir o volver al inicio reaparece la barra, incluidos Atrás y las acciones de la carpeta. Las variaciones pequeñas de dirección usan umbrales para evitar parpadeos.
-- Menú lateral de 60 puntos en formato compacto y 192 en ancho, con margen de 8 puntos; listas con menos margen horizontal. Se mantiene el fondo hasta los bordes y la protección de las áreas de cámara del dispositivo.
-- **En reposo de Wave usa toda la anchura para la biblioteca**: se retira la columna permanente del reproductor y se coloca una franja de controles abajo. La cabecera de la biblioteca integra el cierre, evitando otra fila superior. Se conservan Local/Servidor, carpetas y páginas de 24 elementos.
-- **Atenuación por inactividad**: la vista de Wave se oscurece después de 20 segundos sin tocar; al tocar o mover el dedo se ilumina de nuevo. El primer toque en la pantalla atenuada sirve para despertarla. La música y la selección continúan. La actividad se observa sin cancelar toques ni impedir scroll/slider. Se puede desactivar en Ajustes → Horizontal y En reposo. Se respeta el estado de la app, Reducir movimiento y VoiceOver.
-- **Anterior en el reproductor pequeño**, incluyendo el mismo widget pequeño usado en En reposo de iOS: anterior, reproducir/pausar y siguiente, con áreas de 44 puntos.
-- Nuevo **Wave · Explorador de carpetas**, adicional a los widgets existentes. Utiliza formatos grande y extra grande, sin márgenes del sistema añadidos: Local/Servidor, inicio, carpeta superior, actualización, ruta completa y reproducción directa. Ajusta filas al alto disponible y usa dos columnas en formatos anchos. La navegación es por páginas y botones; comparte estado con el selector, el reproductor y la biblioteca de Wave.
-
-### Límites del sistema y uso
-
-El formato **grande** puede añadirse en Inicio del iPhone; el **extra grande** está disponible en iPad. Añade Explorador de carpetas desde la galería de widgets de Wave. Los widgets no tienen scroll libre ni pueden ocupar arbitrariamente todo el display. En reposo de iOS sigue usando los widgets pequeños; para navegar en toda la pantalla usa la vista En reposo dentro de Wave.
-
-La atenuación de esta entrega sólo afecta al contenido de Wave; no cambia `UIScreen.brightness`, no fuerza una pantalla Always-On por hardware y no desactiva el bloqueo automático de iOS. El brillo y el modo En reposo del sistema los controla iOS.
-
-### Validación e instalación
-
-Esta es una descarga de **fuentes pendientes de compilación con Xcode**. Se han ejecutado los controles del proyecto y del bloqueo de publicación y analizado la sintaxis Swift. Los XCTest incluidos cubren umbrales de scroll, inversión de dirección, posición inicial, geometría inválida, contador de inactividad, capacidad del widget y acción Inicio; necesitan ejecución en un Mac.
-
-Instala desde `Wave.xcodeproj`, conservando el mismo Team y App Group en Wave y WaveWidgets. Antes de publicar una versión verificada:
-
-```sh
-python3 scripts/validate-xcode.py
-python3 scripts/package-release.py --output releases/verified
-```
-
-En dispositivo comprueba especialmente:
-
-1. Entrar en una playlist/carpeta, bajar por la lista y confirmar que desaparece toda la barra superior, no sólo el campo de búsqueda; subir para recuperar Atrás. Repetir en vertical y horizontal, al actualizar y al cambiar de pestaña.
-2. Abrir En reposo y verificar que la biblioteca ocupa el ancho y que la música continúa al explorar o pasar páginas. Confirmar que el reproductor inferior se adapta a la anchura disponible.
-3. Esperar 20 segundos sin tocar: verificar la atenuación; tocar para iluminar y después usar un control. Arrastrar lista o barra durante más de 20 segundos no debe atenuar mientras se interactúa.
-4. Probar Anterior en el widget pequeño y recorrer el nuevo Explorador de carpetas en ambos tamaños; confirmar la misma carpeta y canción en los widgets conectados.
-
-Referencias: [tamaños extra grandes de WidgetKit](https://developer.apple.com/documentation/widgetkit/widgetfamily/systemextralarge), [WidgetKit](https://developer.apple.com/documentation/widgetkit).
-
-
-## Espacio horizontal, navegación y biblioteca En reposo · 0.11.0
-
-Esta entrega incluye las correcciones de carátulas opcionales de 0.9.1 y de coordinación de archivos de 0.10.1. El acceso compartido utiliza `NSFileCoordinator`; no vuelve a invocar `Darwin.flock`.
-
-Cambios de interfaz:
-
-- Fondo y contenedores de Wave ocupan el área completa, incluidas las zonas seguras que antes podían mostrar una franja negra en horizontal. Los controles siguen respetando la cámara y los márgenes del dispositivo.
-- Se retiran el banner superior fijo y la cabecera fija adicional de las listas. El nombre de la página ocupa la fila nativa de navegación, a la misma altura que Atrás. El buscador usa el cajón nativo con presentación automática, que se contrae al desplazarse. El título compacto permanece en la fila de navegación para identificar la carpeta actual.
-- Navegación lateral centrada, con 12 puntos de margen horizontal, 16 verticales, separación entre bibliotecas y utilidades y controles de al menos 44 puntos. En ventanas bajas el menú se puede desplazar para acceder a todas sus opciones.
-- **En reposo de Wave muestra siempre la biblioteca navegable**, con Local/Servidor, carpeta superior y canciones. Se eliminan reloj, fecha y el modo que ocultaba la biblioteca.
-- La biblioteca ocupa la mayor parte del ancho; el reproductor queda en un panel menor, con portada de 88 puntos, controles centrados y barra de reproducción. Las listas presentan filas más legibles y hasta 24 elementos por página, con scroll dentro de esa página.
-- En el reproductor ampliado también se reemplaza la onda por una barra y se centran los controles; en horizontal se limita la portada para dejar más ancho a la cola. Descubre conserva su propia onda.
-
-La presentación En reposo del sistema iOS sigue bajo control de Apple; estos cambios en reloj y distribución corresponden a la vista En reposo **dentro de Wave**. Sus widgets de biblioteca y reproducción continúan conectados.
-
-### Compilación antes de publicar
-
-Esta descarga se genera como **candidato de fuentes**, no como una versión compilada. En Linux se comprueban el proyecto, la sintaxis y el bloqueo de empaquetado. Se incluyen XCTest para los rangos de la barra, orientación y navegación de páginas de 24 elementos, pero no se han ejecutado aquí.
-
-En un Mac con Xcode completo:
-
-```sh
-python3 scripts/validate-xcode.py
-python3 scripts/package-release.py --output releases/verified
-```
-
-El primer comando compila Wave y WaveWidgets y ejecuta XCTest. Si falla, el empaquetador no permite una versión verificada. Un cambio de fuentes invalida el resultado anterior. Consulta `validation/xcode-build.log` para el diagnóstico.
-
-Comprueba en iPhone e iPad:
-
-1. Girar en Local, Servidor, Playlists, Spotify y Ajustes; comprobar el fondo hasta los bordes y que no existe una columna negra junto al menú.
-2. Entrar en una subcarpeta: comprobar que título y Atrás comparten fila, desplazar la lista y verificar la contracción del buscador nativo.
-3. Abrir En reposo: no debe mostrar reloj ni fecha. Navegar por Local/Servidor y subcarpetas, seleccionar una canción y pasar páginas de 24 elementos.
-4. Arrastrar la barra de progreso, pausar, cambiar de canción y confirmar que los controles permanecen centrados; probar también VoiceOver y Texto grande.
-5. Repetir en un iPhone pequeño, con teclado abierto y reduciendo el movimiento. Los elementos que no caben deben poder alcanzarse por scroll.
-
-Referencia: [buscador nativo y ocultación automática](https://developer.apple.com/documentation/swiftui/searchfieldplacement/navigationbardrawer).
-
+# Wave para iPhone e iPad · 0.10.0 (build 24)
 
 ## Selector de música en widgets y En reposo · 0.10.0
 
@@ -134,7 +59,7 @@ Los widgets pequeños admiten **En reposo de iOS (StandBy)**, con fondo removibl
 
 ### Instalar y conectar los widgets
 
-1. Descomprime **Wave-iOS-0.11.0-fuentes-sin-verificar.zip** en una carpeta nueva y abre `Wave.xcodeproj`.
+1. Descomprime **Wave-iOS-0.10.0.zip** en una carpeta nueva y abre `Wave.xcodeproj`.
 2. Selecciona el mismo **Team** y firma automática en los targets **Wave** y **WaveWidgets**.
 3. En Signing & Capabilities → **App Groups**, registra/selecciona **group.app.wave.music** en ambos targets. El proyecto ya contiene los entitlements y embebe `WaveWidgets.appex`. Si ese grupo pertenece a otro Team, usa un identificador de grupo de tu Team y reemplázalo también en `Shared/WaveWidgetState.swift` y ambos entitlements. Para regenerar el proyecto, actualiza igualmente `project.yml` y `scripts/generate-project.py`.
 4. Si Xcode informa de que tu Team no admite App Groups, ese Team no puede firmar esta variante con datos compartidos: necesitas un Team que admita esa capacidad. No se oculta el fallo compartiendo datos en un contenedor que los widgets no puedan leer.
@@ -193,13 +118,13 @@ Las listas personales elegidas en iOS y los recursos de Música/Spotify permanec
 ## Instalar la actualización en el Mac
 
 1. Cierra Xcode por completo con `⌘Q`.
-2. Descomprime `Wave-iOS-0.11.0-fuentes-sin-verificar.zip` en una carpeta nueva. No lo mezcles con la copia antigua.
-3. Dentro de `Wave-iOS-0.11.0`, abre **Wave.xcodeproj**.
+2. Descomprime `Wave-iOS-0.10.0.zip` en una carpeta nueva. No lo mezcles con la copia antigua.
+3. Dentro de `Wave-iOS-0.10.0`, abre **Wave.xcodeproj**.
 4. En TARGETS → Wave → Signing & Capabilities, activa Automatically manage signing y selecciona tu Team.
 5. Arriba, selecciona el scheme **Wave** y tu iPhone o iPad conectado.
 6. Pulsa Ejecutar (`⌘R`).
 
-La app nueva muestra **WAVE 0.11.0** arriba y cinco secciones: **Servidor**, **Mi iPhone/Mi iPad**, **Playlists**, **Spotify** y **Ajustes**. Ajustes muestra la versión del bundle `0.11.0`, build `26`. Si solo ves la lista antigua de carpetas sin estas secciones, esa ejecución sigue usando la versión anterior. Rebuild y Relaunch recompilan/reabren el proyecto seleccionado; no copian las fuentes del servidor al Mac. Verifica la carpeta del proyecto con Show in Finder sobre el proyecto en Xcode.
+La app nueva muestra **WAVE 0.10.0** arriba y cinco secciones: **Servidor**, **Mi iPhone/Mi iPad**, **Playlists**, **Spotify** y **Ajustes**. Ajustes muestra la versión del bundle `0.10.0`, build `24`. Si solo ves la lista antigua de carpetas sin estas secciones, esa ejecución sigue usando la versión anterior. Rebuild y Relaunch recompilan/reabren el proyecto seleccionado; no copian las fuentes del servidor al Mac. Verifica la carpeta del proyecto con Show in Finder sobre el proyecto en Xcode.
 
 No desinstales la app para actualizarla si quieres conservar tus archivos importados. La app instalada puede abrirse sin el cable de Xcode; el servidor y los contenidos en la nube necesitan conexión de red.
 

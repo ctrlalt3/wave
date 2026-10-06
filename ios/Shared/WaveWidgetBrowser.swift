@@ -1,4 +1,5 @@
 import CryptoKit
+import Darwin
 import Foundation
 
 // Browsing is metadata-only. Audio and local file URLs stay in Wave's private container.
@@ -99,7 +100,7 @@ enum WaveWidgetBrowserStorage {
               UUID(uuidString: index.generation) != nil, (0...1_000_000).contains(index.count) else { return result }
         result.total = index.count
         result.state.offset = max(0, min(state.offset, max(0, index.count - 1)))
-        let end = min(result.state.offset + max(1, min(rows, 48)), index.count)
+        let end = min(result.state.offset + max(1, min(rows, 6)), index.count)
         guard end > result.state.offset else { return result }
         let generation = directory.appendingPathComponent(index.generation, isDirectory: true)
         var pages: [Int: [WaveWidgetBrowserItem]] = [:]
@@ -116,32 +117,17 @@ enum WaveWidgetBrowserStorage {
     static func withStateLock<T>(root: URL? = WaveWidgetBrowserStorage.root, _ action: () throws -> T) throws -> T {
         guard let root else { throw Failure(message: "Conecta los widgets desde la instalación de Wave.") }
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        let lockFile = root.appendingPathComponent("state.lock")
-        if !FileManager.default.fileExists(atPath: lockFile.path) {
-            do {
-                try Data().write(to: lockFile, options: [.withoutOverwriting, .completeFileProtectionUntilFirstUserAuthentication])
-            } catch {
-                // A second process may have created the marker concurrently.
-                guard FileManager.default.fileExists(atPath: lockFile.path) else { throw error }
-            }
-        }
-        var coordinationError: NSError?
-        var outcome: Result<T, Error>?
-        let coordinator = NSFileCoordinator(filePresenter: nil)
-        coordinator.coordinate(writingItemAt: lockFile, options: [], error: &coordinationError) { coordinatedURL in
-            outcome = Result {
-                try Data().write(to: coordinatedURL)
-                return try action()
-            }
-        }
-        if let coordinationError { throw coordinationError }
-        guard let outcome else { throw Failure(message: "No se pudo coordinar la biblioteca del widget.") }
-        return try outcome.get()
+        let descriptor = Darwin.open(root.appendingPathComponent("state.lock").path, O_CREAT | O_RDWR, mode_t(S_IRUSR | S_IWUSR))
+        guard descriptor >= 0 else { throw Failure(message: "No se puede acceder a la biblioteca del widget.") }
+        defer { Darwin.close(descriptor) }
+        guard Darwin.flock(descriptor, LOCK_EX) == 0 else { throw Failure(message: "La biblioteca está ocupada.") }
+        defer { Darwin.flock(descriptor, LOCK_UN) }
+        return try action()
     }
     struct Failure: LocalizedError { let message: String; var errorDescription: String? { message } }
 }
 
-enum WaveWidgetBrowseCommand: String { case local, server, toggleSource, home, up, previousPage, nextPage, folder, refresh }
+enum WaveWidgetBrowseCommand: String { case local, server, toggleSource, up, previousPage, nextPage, folder, refresh }
 actor WaveWidgetBrowserService {
     static let shared = WaveWidgetBrowserService()
     private let storageRoot: URL?
@@ -226,16 +212,15 @@ actor WaveWidgetBrowserService {
                 var state = WaveWidgetBrowserStorage.state(root: storageRoot)
                 guard revision.isEmpty || revision == state.revision else { return false }
                 let serverID = state.source == .server ? WaveWidgetBrowserStorage.serverURL(root: storageRoot).map { WaveWidgetBrowserStorage.key($0.absoluteString) } ?? "" : ""
-                let existing = WaveWidgetBrowserStorage.page(state: state, serverID: serverID, rows: max(6, min(stride, 48)), root: storageRoot)
+                let existing = WaveWidgetBrowserStorage.page(state: state, serverID: serverID, rows: 6, root: storageRoot)
                 state.offset = existing.state.offset
                 switch command {
                 case .local: state.source = .local; state.folder = ""; state.offset = 0
                 case .server: state.source = .server; state.folder = ""; state.offset = 0
                 case .toggleSource: state.source = state.source == .local ? .server : .local; state.folder = ""; state.offset = 0
-                case .home: state.folder = ""; state.offset = 0
                 case .up: state.folder = state.folder.split(separator: "/").dropLast().joined(separator: "/"); state.offset = 0
-                case .previousPage: state.offset = max(0, state.offset - max(1, min(stride, 48)))
-                case .nextPage: state.offset = min(max(0, existing.total - 1), state.offset + max(1, min(stride, 48)))
+                case .previousPage: state.offset = max(0, state.offset - max(1, min(stride, 6)))
+                case .nextPage: state.offset = min(max(0, existing.total - 1), state.offset + max(1, min(stride, 6)))
                 case .folder:
                     guard WaveWidgetBrowserStorage.safePath(item), item.split(separator: "/").dropLast().joined(separator: "/") == state.folder,
                           existing.items.contains(where: { $0.kind == .folder && $0.id == item }) else { return false }
@@ -246,9 +231,9 @@ actor WaveWidgetBrowserService {
                 try WaveWidgetBrowserStorage.write(state, file: root.appendingPathComponent("state.json"))
                 return true
             }
-            return await snapshot(rows: max(6, min(stride, 48)), refresh: changed && command != .previousPage && command != .nextPage)
+            return await snapshot(rows: 6, refresh: changed && command != .previousPage && command != .nextPage)
         } catch {
-            var page = await snapshot(rows: max(6, min(stride, 48))); page.message = error.localizedDescription; return page
+            var page = await snapshot(rows: 6); page.message = error.localizedDescription; return page
         }
     }
     struct ServerFolder: Decodable { let name: String; let count: Int }

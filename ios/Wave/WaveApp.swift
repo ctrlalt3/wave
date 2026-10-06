@@ -59,12 +59,19 @@ struct WaveHome: View {
                     .frame(width: measured.sidebarWidth).clipped()
                     .accessibilityHidden(!measured.usesSidebar)
                 compactTabs.frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(WaveTheme.background)
             }
-            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
-            .background(WaveTheme.background)
             .accessibilityHidden(showsDock)
             .environment(\.waveLayout, measured)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if !measured.usesSidebar {
+                    HStack(spacing: 10) {
+                        Image(systemName: "waveform").foregroundStyle(WaveTheme.accent)
+                        Text("WAVE").font(.headline).tracking(3)
+                        Spacer()
+                        Text("0.10.0").font(.caption.monospacedDigit()).foregroundStyle(WaveTheme.secondary).accessibilityIdentifier("wave.build-version")
+                    }.padding(.horizontal, 22).padding(.vertical, 12).background(WaveTheme.background)
+                }
+            }
             .overlay {
                 if showsDock {
                     WaveDockView { manualDock = false; dockDismissed = true }
@@ -73,7 +80,6 @@ struct WaveHome: View {
             }
             .onChange(of: measured, initial: true) { _, value in layout = value }
         }
-        .background(WaveTheme.background.ignoresSafeArea())
         .task {
             player.connectFavorites(preferences)
             await preferences.load()
@@ -148,8 +154,7 @@ struct WaveHome: View {
                     .tabItem { Label(item.title, systemImage: item.icon) }
                     .tag(item)
             }
-        }.frame(maxWidth: .infinity, maxHeight: .infinity).background(WaveTheme.background)
-            .background(WaveTabReselectionObserver { expanded = false })
+        }.background(WaveTabReselectionObserver { expanded = false })
     }
 
     private func synchronizeFavorites() async {
@@ -176,7 +181,6 @@ struct WaveHome: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if !expanded && (!nativeAccessory || layout.usesSidebar) { PlayerBar(expanded: $expanded) }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity).background(WaveTheme.background)
         .toolbar(layout.usesSidebar ? .hidden : .visible, for: .tabBar)
     }
 
@@ -229,8 +233,8 @@ struct ServerLibraryView: View {
                     }
                 } header: { WaveSectionHeader(title: "Playlists · \(folders.count)") }
             }
-        }.waveLibraryStyle()
-            .wavePage(title: "Servidor Wave", search: $search, prompt: "Buscar carpetas")
+        }.waveLibraryStyle().navigationTitle("").navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: "Servidor Wave", search: $search, prompt: "Buscar carpetas") }
             .refreshable { await load() }.task(id: server) { await load() }
             .toolbar { Button { Task { await load() } } label: { Image(systemName: "arrow.clockwise") }.disabled(loading).accessibilityLabel("Actualizar biblioteca") }
     }
@@ -300,8 +304,8 @@ struct ServerFolderView: View {
                     Task { await saveOrder(paths) }
                 }
             }
-        }.waveLibraryStyle()
-            .wavePage(title: folder.name, search: $search, prompt: "Canción o artista")
+        }.waveLibraryStyle().navigationTitle("").navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: folder.name, search: $search, prompt: "Canción o artista") }
             .task { await load(); await preferences.load(); await preferences.synchronizeServer(api) }
             .refreshable { await load(); await preferences.synchronizeServer(api) }
             .toolbar {
@@ -400,8 +404,8 @@ struct LocalLibraryView: View {
             Section("Música de tu dispositivo") {
                 NavigationLink { DeviceMusicLibraryView() } label: { PlaylistRow(name: "Biblioteca de Música", count: device.authorization == .authorized ? device.songs.count : nil, subtitle: "Canciones, álbumes y playlists") }.listRowBackground(WaveTheme.surface)
             }
-        }.waveLibraryStyle()
-            .wavePage(title: WaveSection.local.title, search: $search, prompt: "Buscar playlists")
+        }.waveLibraryStyle().navigationTitle("").navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: WaveSection.local.title, search: $search, prompt: "Buscar playlists") }
             .task { device.reload() }
             .fileImporter(isPresented: $importer, allowedContentTypes: importingFolder ? [.folder] : [.audio], allowsMultipleSelection: true) { result in
                 switch result {
@@ -498,8 +502,8 @@ struct LocalTracksView: View {
                     Task { await local.reorder(reordered.map(\.id)) }
                 }
             }
-        }.waveLibraryStyle()
-            .wavePage(title: favoritesOnly ? "Me gusta" : playlistTitle ?? folder ?? "Todas las canciones", search: $search, prompt: "Carpeta, canción o artista")
+        }.waveLibraryStyle().navigationTitle("").navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: favoritesOnly ? "Me gusta" : playlistTitle ?? folder ?? "Todas las canciones", search: $search, prompt: "Carpeta, canción o artista") }
             .toolbar {
                 if let folder {
                     if !preferences.state.playlists.contains(where: { $0.source == .local && $0.folder == folder }) {
@@ -513,7 +517,6 @@ struct LocalTracksView: View {
 }
 
 struct WaveSettingsView: View {
-    @AppStorage("wave.dock.dimWhenIdle") private var dimWhenIdle = true
     @AppStorage("wave.dock.automatic") private var automaticDock = true
     @AppStorage("wave.appearance") private var appearance = WaveAppearance.system.rawValue
     @AppStorage("wave.accent") private var accent = WaveAccent.system.rawValue
@@ -539,8 +542,6 @@ struct WaveSettingsView: View {
             }.listRowBackground(WaveTheme.surface)
             Section("Horizontal y En reposo") {
                 Toggle("En reposo al cargar en horizontal", isOn: $automaticDock)
-                Toggle("Atenuar tras 20 segundos sin tocar", isOn: $dimWhenIdle)
-                Text("Toca la pantalla para iluminarla. La atenuación sólo afecta a la vista de Wave.").font(.caption).foregroundStyle(WaveTheme.secondary)
                 Text("El menú aparece a la izquierda al girar el dispositivo. La vista En reposo de Wave muestra reloj y música mientras la app está abierta.").font(.caption).foregroundStyle(WaveTheme.secondary)
                 if !WaveWidgetStore.available { Text("Los widgets no están conectados. Revisa las instrucciones de instalación de esta versión.").font(.caption).foregroundStyle(WaveTheme.secondary) }
                 Text("Los widgets Elegir canción y Reproduciendo permiten seleccionar música y controlarla desde Inicio o En reposo de iOS. El widget grande Biblioteca y reproductor reúne ambos.").font(.caption).foregroundStyle(WaveTheme.secondary)
@@ -549,11 +550,11 @@ struct WaveSettingsView: View {
                 Text("En Mi iPhone o Mi iPad puedes abrir tu biblioteca de Música o importar archivos desde Archivos.")
                 Text("Los originales permanecen en su ubicación. Las copias importadas ocupan espacio en este dispositivo.")
             }.font(.subheadline).foregroundStyle(WaveTheme.secondary).listRowBackground(WaveTheme.surface)
-            Section("Wave para iOS · 0.12.0") {
+            Section("Wave para iOS · 0.10.0") {
                 Text("Servidor, archivos locales y biblioteca de Música del dispositivo.")
                 Text("Versión instalada: \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—") · build \(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—")").font(.caption.monospacedDigit())
             }.font(.caption).listRowBackground(WaveTheme.surface)
-        }.waveLibraryStyle()
-            .wavePage(title: "Ajustes").onAppear { draft = server }
+        }.waveLibraryStyle().navigationTitle("").navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: "Ajustes") }.onAppear { draft = server }
     }
 }
