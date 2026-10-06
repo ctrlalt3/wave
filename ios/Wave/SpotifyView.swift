@@ -76,6 +76,7 @@ struct SpotifyView: View {
         List {
             Text("Busca canciones en el catálogo y ábrelas en Spotify para escucharlas.").font(.subheadline).foregroundStyle(WaveTheme.secondary).listRowBackground(Color.clear)
             Section {
+                TextField("Canción, artista o álbum", text: $query).submitLabel(.search).onSubmit { startSearch() }
                 Picker("Mercado", selection: $market) {
                     Text("España").tag("ES"); Text("México").tag("MX"); Text("Argentina").tag("AR"); Text("Estados Unidos").tag("US"); Text("Reino Unido").tag("GB")
                 }
@@ -89,10 +90,17 @@ struct SpotifyView: View {
                         Button {
                             if let url = song.external_urls.spotify, url.scheme == "https", url.host == "open.spotify.com" { openURL(url) }
                         } label: {
-                            HStack(spacing: 8) {
-                                TrackRow(track: WaveTrack(name: song.name, artist: song.artist, duration: Double(song.duration_ms) / 1000, relPath: song.id, filename: song.album.name), active: false, remoteCover: song.album.images.last?.url)
-                                Image(systemName: "arrow.up.right").font(.caption).foregroundStyle(WaveTheme.secondary)
-                            }
+                            HStack(spacing: 12) {
+                                AsyncImage(url: song.album.images.last?.url) { image in image.resizable().scaledToFill() } placeholder: { WaveArtwork(size: 44) }
+                                    .frame(width: 44, height: 44).clipShape(RoundedRectangle(cornerRadius: 5))
+                                VStack(alignment: .leading, spacing: 5) {
+                                    Text(song.name).font(.subheadline.weight(.medium)).foregroundStyle(WaveTheme.ink)
+                                    Text(song.artist).font(.caption).foregroundStyle(WaveTheme.secondary)
+                                    Text(song.album.name).font(.caption2).foregroundStyle(WaveTheme.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "arrow.up.right").font(.caption)
+                            }.padding(.vertical, 5)
                         }.listRowBackground(WaveTheme.surface)
                     }
                 }
@@ -104,8 +112,7 @@ struct SpotifyView: View {
                     Button("Siguiente") { Task { await search(at: offset + 10) } }.disabled(loading || page.next == nil || offset >= 1000)
                 }.listRowBackground(Color.clear)
             }
-        }.waveLibraryStyle()
-            .wavePage(title: "Spotify", search: $query, prompt: "Canción, artista o álbum").onSubmit(of: .search) { startSearch() }
+        }.listStyle(.plain).scrollContentBackground(.hidden).background(WaveTheme.background).navigationTitle("Spotify")
     }
     private func startSearch() {
         guard !loading else { return }
