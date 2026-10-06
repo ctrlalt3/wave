@@ -98,7 +98,7 @@ extension WavePlayer {
         guard let artwork, let current, let root = WaveWidgetStore.container else { return }
         let key = SHA256.hash(data: Data(current.id.utf8)).map { String(format: "%02x", $0) }.joined()
         let filename = "cover-" + key + ".jpg"
-        guard let image = artwork.image(at: CGSize(width: 256, height: 256)) else { return }
+        let image = artwork.image(at: CGSize(width: 256, height: 256))
         let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true
         let thumbnail = UIGraphicsImageRenderer(size: CGSize(width: 256, height: 256), format: format).image { context in
             UIColor.black.setFill(); context.fill(CGRect(x: 0, y: 0, width: 256, height: 256))

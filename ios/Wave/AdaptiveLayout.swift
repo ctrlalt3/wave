@@ -7,7 +7,7 @@ struct WaveAdaptiveLayout: Equatable {
     var isLandscape: Bool { size.width > size.height && size.width >= 540 }
     var usesSidebar: Bool { isLandscape || size.width >= 760 }
     var compactSidebar: Bool { size.height < 500 || size.width < 900 }
-    var sidebarWidth: CGFloat { usesSidebar ? (compactSidebar ? 60 : 192) : 0 }
+    var sidebarWidth: CGFloat { usesSidebar ? (compactSidebar ? 72 : 208) : 0 }
     var compactHeader: Bool { isLandscape && size.height < 500 }
     static let portrait = WaveAdaptiveLayout(size: CGSize(width: 390, height: 844))
 }
@@ -50,47 +50,36 @@ struct WaveSidebar: View {
     let layout: WaveAdaptiveLayout
     let openDock: () -> Void
     var body: some View {
-        GeometryReader { geometry in
+        VStack(spacing: 8) {
+            Label("WAVE", systemImage: "waveform")
+                .labelStyle(SidebarLabelStyle(compact: layout.compactSidebar))
+                .font(.headline).tracking(2).padding(.top, 12).padding(.bottom, 4)
+                .accessibilityLabel("Wave")
             ScrollView {
-                VStack(spacing: 12) {
-                    if !layout.compactHeader {
-                        Label("WAVE", systemImage: "waveform")
-                            .labelStyle(SidebarLabelStyle(compact: layout.compactSidebar))
-                            .font(.headline).tracking(2).padding(.bottom, 12).accessibilityLabel("Wave")
-                    }
-                    VStack(spacing: 6) {
-                        ForEach(WaveSection.allCases.filter { $0 != .settings }) { item in navigationButton(item) }
-                    }
-                    Divider().padding(.horizontal, 4)
-                    VStack(spacing: 6) {
-                        navigationButton(.settings)
-                        Button(action: openDock) {
-                            Label("En reposo", systemImage: "rectangle.split.2x1")
+                VStack(spacing: 4) {
+                    ForEach(WaveSection.allCases) { item in
+                        Button { expanded = false; section = item } label: {
+                            Label(item.title, systemImage: item.icon)
                                 .labelStyle(SidebarLabelStyle(compact: layout.compactSidebar))
-                                .frame(maxWidth: .infinity, minHeight: 44)
-                        }.buttonStyle(.plain).accessibilityLabel("Abrir biblioteca En reposo")
+                                .frame(maxWidth: .infinity, minHeight: 44, alignment: layout.compactSidebar ? .center : .leading)
+                                .padding(.horizontal, layout.compactSidebar ? 0 : 12)
+                                .background(section == item ? WaveTheme.selected : .clear, in: RoundedRectangle(cornerRadius: 12))
+                        }.buttonStyle(.plain).accessibilityLabel(item.title)
+                            .accessibilityAddTraits(section == item ? [.isSelected] : [])
                     }
-                    if !layout.compactSidebar {
-                        Text("WAVE · 0.12.0").font(.caption2.monospaced()).foregroundStyle(WaveTheme.secondary).padding(.top, 12)
-                    }
-                }.frame(maxWidth: .infinity, minHeight: max(0, geometry.size.height - 20), alignment: .center)
-                    .padding(.horizontal, 8).padding(.vertical, 10)
+                }.padding(.horizontal, 8)
             }.scrollIndicators(.hidden)
-        }.frame(maxHeight: .infinity).background(WaveTheme.sidebar)
+            Button(action: openDock) {
+                Label("En reposo", systemImage: "moon.stars")
+                    .labelStyle(SidebarLabelStyle(compact: layout.compactSidebar))
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }.buttonStyle(.plain).accessibilityLabel("Abrir vista En reposo")
+            if !layout.compactSidebar {
+                Text("WAVE · 0.9.0").font(.caption2.monospaced()).foregroundStyle(WaveTheme.secondary).padding(.bottom, 12)
+            }
+        }.background(WaveTheme.sidebar)
             .overlay(alignment: .trailing) { Divider() }
     }
-    private func navigationButton(_ item: WaveSection) -> some View {
-        Button { expanded = false; section = item } label: {
-            Label(item.title, systemImage: item.icon)
-                .labelStyle(SidebarLabelStyle(compact: layout.compactSidebar))
-                .font(.subheadline.weight(.medium))
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: layout.compactSidebar ? .center : .leading)
-                .padding(.horizontal, layout.compactSidebar ? 0 : 8)
-                .background(section == item ? WaveTheme.selected : Color.clear, in: RoundedRectangle(cornerRadius: 12))
-        }.buttonStyle(.plain).accessibilityLabel(item.title)
-            .accessibilityAddTraits(section == item ? [.isSelected] : [])
-    }
-
 }
 private struct SidebarLabelStyle: LabelStyle {
     let compact: Bool

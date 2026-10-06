@@ -31,14 +31,11 @@ class ProjectTests(unittest.TestCase):
             sources = self.sources(name)
             self.assertIn('WavePlaybackIntent.swift', sources)
             self.assertIn('WaveWidgetState.swift', sources)
-            self.assertIn('WaveWidgetBrowser.swift', sources)
             self.assertEqual(len(sources), len(set(sources)))
 
     def test_extension_does_not_compile_application_player(self):
         self.assertNotIn('WavePlayer.swift', self.sources('WaveWidgets'))
         self.assertNotIn('WaveApp.swift', self.sources('WaveWidgets'))
-        self.assertNotIn('WidgetLibraryIntegration.swift', self.sources('WaveWidgets'))
-        self.assertIn('WidgetLibraryIntegration.swift', self.sources('Wave'))
         self.assertIn('WaveWidgets.swift', self.sources('WaveWidgets'))
         self.assertNotIn('WaveWidgets.swift', self.sources('Wave'))
 

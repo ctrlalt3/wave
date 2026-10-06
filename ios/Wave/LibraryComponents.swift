@@ -91,6 +91,27 @@ struct TrackTools: View {
     }
 }
 
+// Kept outside the scrolling list so search remains available at every position.
+struct LibrarySearchBar: View {
+    @Binding var text: String
+    let prompt: String
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass").foregroundStyle(WaveTheme.secondary)
+            TextField(prompt, text: $text).textInputAutocapitalization(.never).autocorrectionDisabled()
+            if !text.isEmpty {
+                Button { text = "" } label: { Image(systemName: "xmark.circle.fill") }
+                    .foregroundStyle(WaveTheme.secondary).accessibilityLabel("Borrar búsqueda")
+                    .frame(minWidth: 44, minHeight: 44)
+            }
+        }
+        .padding(.horizontal, 14).frame(minHeight: 48)
+        .modifier(WaveGlassPanel(radius: 16))
+        .padding(.horizontal, 16).padding(.top, 16).padding(.bottom, 12)
+        .background(WaveTheme.background)
+    }
+}
+
 struct LocalPlaylistRow: View {
     let folder: String
     @EnvironmentObject private var local: LocalLibrary
@@ -101,46 +122,55 @@ struct LocalPlaylistRow: View {
     }
 }
 
-private struct WavePageNavigation: ViewModifier {
+struct WavePageHeader: View {
+    @Environment(\.waveLayout) private var layout
     let title: String
-    let search: Binding<String>?
-    let prompt: String
-    @State private var chromeHidden = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @ViewBuilder func body(content: Content) -> some View {
-        if let search {
-            navigation(content)
-                .searchable(text: search, placement: .navigationBarDrawer(displayMode: .automatic), prompt: Text(prompt))
-                .textInputAutocapitalization(.never).autocorrectionDisabled()
-        } else { navigation(content) }
+    var search: Binding<String>? = nil
+    var prompt = "Buscar"
+    var body: some View {
+        Group {
+            if layout.compactHeader {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 16) {
+                        Text(title).font(.headline).lineLimit(1).accessibilityAddTraits(.isHeader)
+                        if let search {
+                            HStack(spacing: 8) {
+                                Image(systemName: "magnifyingglass").foregroundStyle(WaveTheme.secondary)
+                                TextField(prompt, text: search).textInputAutocapitalization(.never).autocorrectionDisabled()
+                                if !search.wrappedValue.isEmpty {
+                                    Button { search.wrappedValue = "" } label: { Image(systemName: "xmark.circle.fill") }.frame(width: 44, height: 44).accessibilityLabel("Borrar búsqueda")
+                                }
+                            }.padding(.leading, 12).frame(minWidth: 160, minHeight: 44).background(WaveTheme.selected, in: RoundedRectangle(cornerRadius: 12))
+                        } else { Spacer(minLength: 0) }
+                    }.padding(.horizontal, 16).padding(.vertical, 6)
+                    standardHeader
+                }
+            } else { standardHeader }
+        }.background(WaveTheme.background)
+
     }
-    private func navigation(_ content: Content) -> some View {
-        content.navigationTitle(Text(title)).navigationBarTitleDisplayMode(.inline)
-            .background(WaveScrollChromeObserver { hidden in
-                guard chromeHidden != hidden else { return }
-                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) { chromeHidden = hidden }
-            })
-            .toolbar(chromeHidden ? .hidden : .visible, for: .navigationBar)
-            .onAppear { chromeHidden = false }
-            .toolbarBackground(WaveTheme.background, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
+    private var standardHeader: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title).font(.title2.weight(.semibold)).foregroundStyle(WaveTheme.ink)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 22).padding(.top, 20).padding(.bottom, search == nil ? 20 : 4)
+                .accessibilityAddTraits(.isHeader)
+            if let search { LibrarySearchBar(text: search, prompt: prompt) }
+        }
     }
+
 }
 
 private struct WaveLibraryStyle: ViewModifier {
     @Environment(\.waveLayout) private var layout
     func body(content: Content) -> some View {
-        content.frame(maxWidth: .infinity, maxHeight: .infinity).listStyle(.plain).listSectionSpacing(layout.compactHeader ? 8 : 20).scrollContentBackground(.hidden)
-            .contentMargins(.horizontal, layout.usesSidebar ? 4 : 12, for: .scrollContent)
-            .contentMargins(.top, layout.compactHeader ? 0 : 8, for: .scrollContent)
+        content.listStyle(.plain).listSectionSpacing(layout.compactHeader ? 8 : 20).scrollContentBackground(.hidden)
+            .contentMargins(.top, layout.compactHeader ? 4 : 16, for: .scrollContent)
             .contentMargins(.bottom, layout.compactHeader ? 12 : 32, for: .scrollContent).background(WaveTheme.background)
     }
 }
 extension View {
     func waveLibraryStyle() -> some View { modifier(WaveLibraryStyle()) }
-    func wavePage(title: String, search: Binding<String>? = nil, prompt: String = "Buscar") -> some View {
-        modifier(WavePageNavigation(title: title, search: search, prompt: prompt))
-    }
 }
 
 struct WaveHeartLabelStyle: LabelStyle {
