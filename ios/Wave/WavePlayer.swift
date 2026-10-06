@@ -36,7 +36,6 @@ final class WavePlayer: ObservableObject {
     var persistedWidgetQueue: [String] = []
     var persistedWidgetCurrentID: String?
     var widgetSavedSongs: [WaveSavedPlaybackSong] = []
-    var choosingWidgetSong = false
     var restoringWidgetPlayback = false
     var widgetPreferencesOwner: LibraryPreferences?
     @Published private(set) var current: PlaybackSong? {
@@ -62,7 +61,7 @@ final class WavePlayer: ObservableObject {
     @Published var repeatQueue = false {
         didSet { if current?.mediaItem != nil { music.repeatMode = repeatQueue ? .all : .none }; if oldValue != repeatQueue { publishWidgetSnapshot(force: true) } }
     }
-    @Published var error: String? { didSet { if oldValue != error { publishWidgetSnapshot(force: true) } } }
+    @Published var error: String?
     private let player = AVPlayer()
     private lazy var music = MPMusicPlayerController.applicationQueuePlayer
     private var deviceNotificationsStarted = false
