@@ -27,8 +27,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.wave.music.ios
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) WAVE_APP"
-        MARKETING_VERSION: '0.12.0'
-        CURRENT_PROJECT_VERSION: '27'
+        MARKETING_VERSION: '0.11.3'
+        CURRENT_PROJECT_VERSION: '31'
     dependencies:
       - target: WaveWidgets
         embed: true
@@ -55,8 +55,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.wave.music.ios.widgets
-        MARKETING_VERSION: '0.12.0'
-        CURRENT_PROJECT_VERSION: '27'
+        MARKETING_VERSION: '0.11.3'
+        CURRENT_PROJECT_VERSION: '31'
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
     info:

@@ -63,3 +63,18 @@ struct WaveChooseSongIntent: AudioPlaybackIntent {
         return .result()
     }
 }
+
+struct WaveFavoriteIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Me gusta en Wave"
+    static var openAppWhenRun = false
+    @Parameter(title: "Canción") var songID: String
+    @Parameter(title: "Marcar Me gusta") var liked: Bool
+    init() { songID = ""; liked = true }
+    init(songID: String, liked: Bool) { self.songID = songID; self.liked = liked }
+    @MainActor func perform() async throws -> some IntentResult {
+        #if WAVE_APP
+        await WavePlayer.shared.favoriteWidgetSong(id: songID, liked: liked)
+        #endif
+        return .result()
+    }
+}

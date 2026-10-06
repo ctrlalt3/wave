@@ -47,8 +47,7 @@ with zipfile.ZipFile(temp) as archive:
     for required in ['Wave/AdaptiveLayout.swift', 'Wave/WaveDockView.swift', 'Wave/WidgetPlayback.swift',
                      'Shared/WaveWidgetState.swift', 'Shared/WavePlaybackIntent.swift', 'Shared/WaveWidgetBrowser.swift',
                      'Wave/WidgetLibraryIntegration.swift', 'Wave/WaveDockLibraryView.swift',
-                     'WaveWidgets/WaveWidgetBrowserViews.swift', 'WaveWidgets/WaveFolderExplorerView.swift',
-                     'Shared/WidgetExplorerLayout.swift', 'Wave/ScrollChrome.swift', 'Wave/DockActivity.swift',
+                     'WaveWidgets/WaveWidgetBrowserViews.swift',
                      'WaveWidgets/WaveWidgets.swift', 'WaveWidgets/Info.plist',
                      'Wave/Wave.entitlements', 'WaveWidgets/WaveWidgets.entitlements', 'Wave.xcodeproj/project.pbxproj']:
         assert prefix + required in archive.namelist(), required

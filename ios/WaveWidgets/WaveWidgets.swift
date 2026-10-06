@@ -8,7 +8,6 @@ struct WaveWidgetsBundle: WidgetBundle {
         WaveNowPlayingWidget()
         WaveLibraryWidget()
         WaveMusicConsoleWidget()
-        WaveFolderExplorerWidget()
     }
 }
 struct WaveWidgetEntry: TimelineEntry {
@@ -30,7 +29,7 @@ struct WaveWidgetProvider: TimelineProvider {
         let image = WaveWidgetStore.artworkURL(filename: state.artworkFilename).flatMap { UIImage(contentsOfFile: $0.path) }
         let browsing = WaveWidgetBrowserStorage.state()
         let serverID = browsing.source == .server ? WaveWidgetBrowserStorage.serverURL().map { WaveWidgetBrowserStorage.key($0.absoluteString) } ?? "" : ""
-        var browser = WaveWidgetBrowserStorage.page(state: browsing, serverID: serverID, rows: 24)
+        var browser = WaveWidgetBrowserStorage.page(state: browsing, serverID: serverID, rows: 6)
         if browser.total == 0 && browser.message == nil { browser.message = "Pulsa Actualizar para cargar la biblioteca." }
         return WaveWidgetEntry(date: .now, state: state, artwork: image, browser: browser)
     }
@@ -75,17 +74,24 @@ struct WaveNowPlayingWidgetView: View {
                     Text(entry.state.artist).font(.caption).lineLimit(1)
                     ProgressView(value: entry.state.fraction).tint(.primary)
                 }.frame(maxWidth: .infinity, alignment: .leading)
-                if entry.state.songID != nil { playbackButton(.toggle, symbol: entry.state.isPlaying ? "pause.fill" : "play.fill", label: entry.state.isPlaying ? "Pausar" : "Reproducir", size: 36) }
+                if entry.state.songID != nil {
+                    VStack(spacing: 0) {
+                        playbackButton(.previous, symbol: "backward.end.fill", label: "Anterior", size: 28)
+                        playbackButton(.next, symbol: "forward.end.fill", label: "Siguiente", size: 28)
+                    }
+                    VStack(spacing: 0) {
+                        playbackButton(.toggle, symbol: entry.state.isPlaying ? "pause.fill" : "play.fill", label: entry.state.isPlaying ? "Pausar" : "Reproducir", size: 28)
+                        favoriteButton(showTitle: false, size: 28)
+                    }
+                }
             }
         case .systemSmall:
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    artwork(size: 32)
-                    Spacer(minLength: 4)
-                    Image(systemName: "waveform").foregroundStyle(.secondary).accessibilityHidden(true)
+            VStack(spacing: 4) {
+                HStack(spacing: 8) {
+                    artwork(size: 28)
+                    Text(entry.state.title).font(.subheadline.weight(.semibold)).lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                Text(entry.state.title).font(showsBackground ? .subheadline.weight(.semibold) : .headline).lineLimit(2).minimumScaleFactor(0.85)
-                Spacer(minLength: 0)
                 if entry.state.songID != nil {
                     HStack(spacing: 0) {
                         playbackButton(.previous, symbol: "backward.end.fill", label: "Anterior")
@@ -94,8 +100,9 @@ struct WaveNowPlayingWidgetView: View {
                         Spacer(minLength: 0)
                         playbackButton(.next, symbol: "forward.end.fill", label: "Siguiente")
                     }
-                } else { Label("Abrir Wave", systemImage: "arrow.up.right").font(.caption) }
-            }.padding(8)
+                    favoriteButton(showTitle: true).frame(maxWidth: .infinity)
+                } else { Label("Abrir Wave", systemImage: "arrow.up.right").font(.caption).frame(minHeight: 44) }
+            }.padding(6)
         default:
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 14) {
@@ -113,7 +120,7 @@ struct WaveNowPlayingWidgetView: View {
                         playbackButton(.toggle, symbol: entry.state.isPlaying ? "pause.fill" : "play.fill", label: entry.state.isPlaying ? "Pausar" : "Reproducir")
                         playbackButton(.next, symbol: "forward.end.fill", label: "Siguiente")
                         Spacer(minLength: 4)
-                        if entry.state.isLiked { Image(systemName: "heart.fill").foregroundStyle(.red).accessibilityLabel("En Me gusta") }
+                        favoriteButton(showTitle: false)
                         if family != .systemMedium { Text("WAVE").font(.caption2).tracking(2).foregroundStyle(.secondary) }
                     }
                 }
@@ -129,8 +136,18 @@ struct WaveNowPlayingWidgetView: View {
                     if entry.state.queue.isEmpty { Text("Abre Wave para elegir tu próxima canción.").font(.caption).foregroundStyle(.secondary) }
                     Spacer(minLength: 0)
                 }
-            }.padding(12)
+            }
         }
+    }
+    private func favoriteButton(showTitle: Bool, size: CGFloat = 44) -> some View {
+        Button(intent: WaveFavoriteIntent(songID: entry.state.songID ?? "", liked: !entry.state.isLiked)) {
+            HStack(spacing: 6) {
+                Image(systemName: entry.state.isLiked ? "heart.fill" : "heart")
+                if showTitle { Text("Me gusta").font(.caption) }
+            }.frame(minWidth: size, minHeight: size)
+        }.buttonStyle(.plain).foregroundStyle(entry.state.isLiked ? Color.red : Color.primary)
+            .disabled(entry.state.songID == nil)
+            .accessibilityLabel(entry.state.isLiked ? "Quitar Me gusta" : "Me gusta")
     }
     private func artwork(size: CGFloat) -> some View {
         Group {
@@ -170,21 +187,6 @@ struct WaveMusicConsoleWidget: Widget {
         .containerBackgroundRemovable(true)
         .configurationDisplayName("Wave · Biblioteca y reproductor")
         .description("Elige canciones y controla la reproducción desde un único widget grande.")
-        .supportedFamilies([.systemLarge, .systemExtraLarge])
-    }
-}
-
-struct WaveFolderExplorerWidget: Widget {
-    let kind = "WaveFolderExplorer"
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: WaveWidgetProvider()) { entry in
-            WaveFolderExplorerView(page: entry.browser, playback: entry.state)
-                .containerBackground(for: .widget) { Color(.secondarySystemBackground) }
-        }
-        .contentMarginsDisabled()
-        .containerBackgroundRemovable(true)
-        .configurationDisplayName("Wave · Explorador de carpetas")
-        .description("Bibliotecas Local y Servidor, ruta, carpeta superior, inicio y reproducción directa en el mayor espacio disponible.")
         .supportedFamilies([.systemLarge, .systemExtraLarge])
     }
 }

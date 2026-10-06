@@ -7,7 +7,7 @@ struct WaveAdaptiveLayout: Equatable {
     var isLandscape: Bool { size.width > size.height && size.width >= 540 }
     var usesSidebar: Bool { isLandscape || size.width >= 760 }
     var compactSidebar: Bool { size.height < 500 || size.width < 900 }
-    var sidebarWidth: CGFloat { usesSidebar ? (compactSidebar ? 60 : 192) : 0 }
+    var sidebarWidth: CGFloat { usesSidebar ? (compactSidebar ? 76 : 216) : 0 }
     var compactHeader: Bool { isLandscape && size.height < 500 }
     static let portrait = WaveAdaptiveLayout(size: CGSize(width: 390, height: 844))
 }
@@ -71,10 +71,10 @@ struct WaveSidebar: View {
                         }.buttonStyle(.plain).accessibilityLabel("Abrir biblioteca En reposo")
                     }
                     if !layout.compactSidebar {
-                        Text("WAVE · 0.12.0").font(.caption2.monospaced()).foregroundStyle(WaveTheme.secondary).padding(.top, 12)
+                        Text("WAVE · 0.11.3").font(.caption2.monospaced()).foregroundStyle(WaveTheme.secondary).padding(.top, 12)
                     }
-                }.frame(maxWidth: .infinity, minHeight: max(0, geometry.size.height - 20), alignment: .center)
-                    .padding(.horizontal, 8).padding(.vertical, 10)
+                }.frame(maxWidth: .infinity, minHeight: max(0, geometry.size.height - 32), alignment: .center)
+                    .padding(.horizontal, 12).padding(.vertical, 16)
             }.scrollIndicators(.hidden)
         }.frame(maxHeight: .infinity).background(WaveTheme.sidebar)
             .overlay(alignment: .trailing) { Divider() }
@@ -85,7 +85,7 @@ struct WaveSidebar: View {
                 .labelStyle(SidebarLabelStyle(compact: layout.compactSidebar))
                 .font(.subheadline.weight(.medium))
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: layout.compactSidebar ? .center : .leading)
-                .padding(.horizontal, layout.compactSidebar ? 0 : 8)
+                .padding(.horizontal, layout.compactSidebar ? 0 : 12)
                 .background(section == item ? WaveTheme.selected : Color.clear, in: RoundedRectangle(cornerRadius: 12))
         }.buttonStyle(.plain).accessibilityLabel(item.title)
             .accessibilityAddTraits(section == item ? [.isSelected] : [])

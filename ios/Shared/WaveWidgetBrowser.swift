@@ -141,7 +141,7 @@ enum WaveWidgetBrowserStorage {
     struct Failure: LocalizedError { let message: String; var errorDescription: String? { message } }
 }
 
-enum WaveWidgetBrowseCommand: String { case local, server, toggleSource, home, up, previousPage, nextPage, folder, refresh }
+enum WaveWidgetBrowseCommand: String { case local, server, toggleSource, location, up, previousPage, nextPage, folder, refresh }
 actor WaveWidgetBrowserService {
     static let shared = WaveWidgetBrowserService()
     private let storageRoot: URL?
@@ -193,6 +193,13 @@ actor WaveWidgetBrowserService {
         }
         lastLocalSignature = signature
     }
+    func folderOptions() -> [WaveWidgetFolderRecord] {
+        guard let root = storageRoot else { return [] }
+        let state = WaveWidgetBrowserStorage.state(root: storageRoot)
+        let serverID = WaveWidgetBrowserStorage.serverURL(root: storageRoot).map { WaveWidgetBrowserStorage.key($0.absoluteString) } ?? ""
+        let filename = state.source == .local ? "local-folders.json" : "server-folders-" + serverID + ".json"
+        return WaveWidgetBrowserStorage.read([WaveWidgetFolderRecord].self, file: root.appendingPathComponent(filename)) ?? []
+    }
     func snapshot(rows: Int = 6, refresh: Bool = false) async -> WaveWidgetBrowserPage {
         var state = WaveWidgetBrowserStorage.state(root: storageRoot)
         let serverID = state.source == .server ? WaveWidgetBrowserStorage.serverURL(root: storageRoot).map { WaveWidgetBrowserStorage.key($0.absoluteString) } ?? "" : ""
@@ -232,7 +239,14 @@ actor WaveWidgetBrowserService {
                 case .local: state.source = .local; state.folder = ""; state.offset = 0
                 case .server: state.source = .server; state.folder = ""; state.offset = 0
                 case .toggleSource: state.source = state.source == .local ? .server : .local; state.folder = ""; state.offset = 0
-                case .home: state.folder = ""; state.offset = 0
+                case .location:
+                    if item.isEmpty { state.folder = ""; state.offset = 0 }
+                    else {
+                        let filename = state.source == .local ? "local-folders.json" : "server-folders-" + serverID + ".json"
+                        let folders = WaveWidgetBrowserStorage.read([WaveWidgetFolderRecord].self, file: root.appendingPathComponent(filename)) ?? []
+                        guard WaveWidgetBrowserStorage.safePath(item), folders.contains(where: { $0.path == item }) else { return false }
+                        state.folder = item; state.offset = 0
+                    }
                 case .up: state.folder = state.folder.split(separator: "/").dropLast().joined(separator: "/"); state.offset = 0
                 case .previousPage: state.offset = max(0, state.offset - max(1, min(stride, 48)))
                 case .nextPage: state.offset = min(max(0, existing.total - 1), state.offset + max(1, min(stride, 48)))

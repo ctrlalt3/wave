@@ -52,18 +52,21 @@ final class WidgetBrowserTests: XCTestCase {
         XCTAssertEqual(page.state.folder, folder)
         XCTAssertEqual(page.items.count, 1)
     }
-    func testHomeReturnsToRootWithoutChangingSource() async throws {
+    func testFolderMenuCanJumpBetweenKnownFoldersButRejectsUnknownLocation() async throws {
         let root = try temporaryRoot(), service = WaveWidgetBrowserService(root: root)
-        try await service.publishLocal(songs(count: 20), folders: ["Music/Album"])
+        let values = songs(count: 2, folder: "Music/A") + songs(count: 1, folder: "Music/B")
+        try await service.publishLocal(values, folders: ["Music/A", "Music/B"])
+        let options = await service.folderOptions()
+        XCTAssertEqual(Set(options.map(\.path)), ["Music", "Music/A", "Music/B"])
         var page = await service.snapshot()
-        page = await service.navigate(.folder, item: "Music", revision: page.state.revision)
-        page = await service.navigate(.folder, item: "Music/Album", revision: page.state.revision)
-        page = await service.navigate(.nextPage, revision: page.state.revision, stride: 6)
-        page = await service.navigate(.home, revision: page.state.revision)
-        XCTAssertEqual(page.state.source, .local)
+        page = await service.navigate(.location, item: "Music/B", revision: page.state.revision)
+        XCTAssertEqual(page.state.folder, "Music/B")
+        page = await service.navigate(.location, item: "Music/A", revision: page.state.revision)
+        XCTAssertEqual(page.state.folder, "Music/A")
+        let rejected = await service.navigate(.location, item: "Unknown", revision: page.state.revision)
+        XCTAssertEqual(rejected.state.folder, "Music/A")
+        page = await service.navigate(.location, item: "", revision: page.state.revision)
         XCTAssertEqual(page.state.folder, "")
-        XCTAssertEqual(page.state.offset, 0)
-        XCTAssertEqual(page.items.map(\.id), ["Music"])
     }
     func testTwoBrowsersShareStateAndStaleButtonsCannotJumpTwice() async throws {
         let root = try temporaryRoot(), first = WaveWidgetBrowserService(root: root), second = WaveWidgetBrowserService(root: root)

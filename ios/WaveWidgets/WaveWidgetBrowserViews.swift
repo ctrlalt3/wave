@@ -121,6 +121,10 @@ struct WaveMusicConsoleView: View {
                 Button(intent: WavePlaybackIntent(command: .previous)) { Image(systemName: "backward.end.fill").frame(width: 44, height: 44) }.accessibilityLabel("Anterior")
                 Button(intent: WavePlaybackIntent(command: .toggle)) { Image(systemName: entry.state.isPlaying ? "pause.fill" : "play.fill").frame(width: 44, height: 44) }.accessibilityLabel(entry.state.isPlaying ? "Pausar" : "Reproducir")
                 Button(intent: WavePlaybackIntent(command: .next)) { Image(systemName: "forward.end.fill").frame(width: 44, height: 44) }.accessibilityLabel("Siguiente")
+                Button(intent: WaveFavoriteIntent(songID: entry.state.songID ?? "", liked: !entry.state.isLiked)) {
+                    Image(systemName: entry.state.isLiked ? "heart.fill" : "heart").frame(width: 44, height: 44)
+                        .foregroundStyle(entry.state.isLiked ? Color.red : Color.primary)
+                }.accessibilityLabel(entry.state.isLiked ? "Quitar Me gusta" : "Me gusta")
                 Spacer(minLength: 0)
             }.buttonStyle(.plain).disabled(entry.state.songID == nil)
         }

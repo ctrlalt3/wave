@@ -3,6 +3,25 @@ import XCTest
 @testable import Wave
 
 final class LibraryPreferencesTests: XCTestCase {
+    @MainActor func testExplicitWidgetLikeAndUnlikeAreIdempotent() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let storage = LibraryPreferencesStorage(file: root.appendingPathComponent("preferences.json"))
+        let preferences = LibraryPreferences(storage: storage)
+        await preferences.load()
+        let track = WaveTrack(name: "Song", artist: "Artist", duration: 10, relPath: "song.wav", filename: "song.wav")
+        let song = PlaybackSong(track: track, url: nil, source: "local", identity: "local:widget-heart")
+        let first = await preferences.setLike(song, liked: true)
+        let second = await preferences.setLike(song, liked: true)
+        XCTAssertTrue(first); XCTAssertTrue(second)
+        XCTAssertTrue(preferences.liked(song.id))
+        let third = await preferences.setLike(song, liked: false)
+        let fourth = await preferences.setLike(song, liked: false)
+        XCTAssertTrue(third); XCTAssertTrue(fourth)
+        XCTAssertFalse(preferences.liked(song.id))
+        let persisted = try await storage.read()
+        XCTAssertFalse(persisted.favorites.contains(song.id))
+    }
     func testFavoritesPersistAndRemainSeparateBySource() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
