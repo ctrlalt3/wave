@@ -66,12 +66,6 @@ struct WaveAPI {
         return url(["api", "artwork"] + relative.split(separator: "/").map(String.init))
     }
 
-    func artworkURL(for track: WaveTrack) -> URL? {
-        if let path = track.coverUrl { return artworkURL(path) }
-        guard Self.safePath(track.relPath) else { return nil }
-        return url(["api", "artwork"] + track.relPath.split(separator: "/").map(String.init))
-    }
-
     func get<T: Decodable>(_ components: [String]) async throws -> T {
         try await request(components)
     }
@@ -82,13 +76,7 @@ struct WaveAPI {
 
     private func request<T: Decodable>(_ components: [String], method: String = "GET", body: [String: Any]? = nil) async throws -> T {
         var request = URLRequest(url: url(components))
-        request.timeoutInterval = components.starts(with: ["api", "cloud"]) ? 300 : 25
-        // Hearts are shared mutable state; a cached read can undo a new save
-        // when a folder synchronizes after returning from Discover.
-        if components == ["api", "likes"] {
-            request.cachePolicy = .reloadIgnoringLocalCacheData
-            request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
-        }
+        request.timeoutInterval = 25
         request.httpMethod = method
         if let body {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -169,28 +157,5 @@ struct WaveAPI {
     struct Failure: LocalizedError {
         let message: String
         var errorDescription: String? { message }
-    }
-
-    func toggleLike(_ path: String) async throws -> Bool {
-        try await changeLike(path, desired: nil)
-    }
-
-    func setLike(_ path: String, liked: Bool) async throws {
-        let result = try await changeLike(path, desired: liked)
-        if result == liked { return }
-        // Older Wave servers accept only toggle. Confirm the desired state
-        // with one additional change rather than trusting an unconfirmed save.
-        let retry = try await changeLike(path, desired: liked)
-        guard retry == liked else {
-            throw Failure(message: "El servidor no confirmó Me gusta. Vuelve a intentarlo.")
-        }
-    }
-    private func changeLike(_ path: String, desired: Bool?) async throws -> Bool {
-        guard Self.safePath(path) else { throw Failure(message: "Ruta no válida.") }
-        struct Response: Decodable { let liked: Bool }
-        var body: [String: Any] = ["track": path]
-        if let desired { body["liked"] = desired }
-        let response: Response = try await request(["api", "like"], method: "POST", body: body)
-        return response.liked
     }
 }

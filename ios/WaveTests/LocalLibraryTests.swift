@@ -63,62 +63,6 @@ final class LocalLibraryTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: manifest), original)
     }
 
-    func testPlaylistFoldersIncludeParentsAndDeduplicateSharedFolders() {
-        let songs = [
-            LocalSong(id: "1", file: "1.wav", folder: "Colección/Álbum/Disco 1", name: "Uno", artist: "Artista", duration: 1),
-            LocalSong(id: "2", file: "2.wav", folder: "Colección/Álbum/Disco 1", name: "Dos", artist: "Artista", duration: 1),
-            LocalSong(id: "3", file: "3.wav", folder: "Colección/Otro álbum", name: "Tres", artist: "Artista", duration: 1)
-        ]
-        XCTAssertEqual(LocalSong.playlistFolders(for: songs), [
-            "Colección", "Colección/Álbum", "Colección/Álbum/Disco 1", "Colección/Otro álbum"
-        ])
-        XCTAssertEqual(LocalSong.playlistFolders(for: []), [])
-        XCTAssertEqual(LocalSong.childFolders(in: nil, songs: songs), ["Colección"])
-        XCTAssertEqual(LocalSong.childFolders(in: "Colección", songs: songs), ["Colección/Álbum", "Colección/Otro álbum"])
-        XCTAssertEqual(LocalSong.childFolders(in: "Colección/Álbum", songs: songs), ["Colección/Álbum/Disco 1"])
-        XCTAssertEqual(LocalSong.childFolders(in: "Colección/Álbum/Disco 1", songs: songs), [])
-        XCTAssertEqual(LocalSong.childFolders(in: "Colección/Ál", songs: songs), [])
-    }
-
-    func testReimportSkipsSameFilesAndRegistersChildPlaylists() async throws {
-        let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        defer { try? FileManager.default.removeItem(at: temporary) }
-        let selected = temporary.appendingPathComponent("sesion")
-        let album = selected.appendingPathComponent("House")
-        try FileManager.default.createDirectory(at: album, withIntermediateDirectories: true)
-        try waveAudio().write(to: album.appendingPathComponent("song.wav"))
-        let storage = LocalLibraryStorage(root: temporary.appendingPathComponent("library"))
-        let first = try await storage.importFiles([selected])
-        let repeated = try await storage.importFiles([selected])
-        XCTAssertEqual(first.playlistFolders, ["sesion/House"])
-        XCTAssertEqual(repeated.playlistFolders, ["sesion/House"])
-        XCTAssertEqual(repeated.skipped, 1)
-        XCTAssertEqual(repeated.songs.count, 1)
-        XCTAssertEqual(repeated.songs.first?.id, first.songs.first?.id)
-    }
-
-    func testRepairKeepsDistinctRecordingsAndPreservesDuplicateFiles() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        defer { try? FileManager.default.removeItem(at: root) }
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        for file in ["one.wav", "copy.wav"] { try waveAudio().write(to: root.appendingPathComponent(file)) }
-        try Data("different bytes".utf8).write(to: root.appendingPathComponent("different.wav"))
-        let songs = [
-            LocalSong(id: "one", file: "one.wav", folder: "sesion/House", name: "Song", artist: "Artist", duration: 1, originalFilename: "song.wav"),
-            LocalSong(id: "copy", file: "copy.wav", folder: "sesion/House", name: "Song", artist: "Artist", duration: 1, originalFilename: "song.wav"),
-            LocalSong(id: "different", file: "different.wav", folder: "sesion/House", name: "Song", artist: "Artist", duration: 1, originalFilename: "song.wav")
-        ]
-        let storage = LocalLibraryStorage(root: root)
-        try await storage.save(songs)
-        let repaired = try await storage.repairDuplicates()
-        XCTAssertEqual(repaired.songs.map(\.id), ["one", "different"])
-        XCTAssertEqual(repaired.replacements, ["copy": "one"])
-        XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("copy.wav").path))
-        let backups = try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil).filter { $0.lastPathComponent.hasPrefix("library-before-dedup-") }
-        let backup = try XCTUnwrap(backups.first)
-        XCTAssertEqual(try JSONDecoder().decode([LocalSong].self, from: Data(contentsOf: backup)).count, 3)
-    }
-
     private func waveAudio() -> Data {
         let samples = Data(repeating: 0, count: 44100 * 2)
         var data = Data("RIFF".utf8)
