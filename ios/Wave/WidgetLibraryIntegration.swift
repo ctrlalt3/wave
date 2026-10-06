@@ -30,7 +30,7 @@ extension WavePlayer {
                     .compactMap { $0.widgetPlayable(root: WavePlaybackStorage.root) }
                 play(playable, queue: queue)
             } else {
-                let value = UserDefaults.standard.string(forKey: "wave.server") ?? ""
+                let value = WaveServerSettings.resolvedAddress()
                 let api = try WaveAPI(server: value)
                 guard WaveWidgetBrowserStorage.key(api.base.absoluteString) == serverID,
                       WaveAPI.safePath(id) else { throw WaveAPI.Failure(message: "El servidor ha cambiado. Actualiza el selector antes de reproducir.") }
@@ -40,5 +40,21 @@ extension WavePlayer {
                 play(selected, queue: songs, api: api)
             }
         } catch { self.error = error.localizedDescription }
+    }
+}
+
+enum WaveWidgetBootstrap {
+    static func refresh() async {
+        do {
+            let address = WaveServerSettings.resolvedAddress()
+            try await WaveWidgetBrowserService.shared.configureServer(address)
+            let songs = try await LocalLibraryStorage(root: WavePlaybackStorage.root).read()
+            let items = songs.filter { !$0.hidden }.map { song in
+                WaveWidgetBrowserItem(id: song.id, title: song.name, subtitle: song.artist, kind: .song,
+                    playbackID: song.widgetPlayable(root: WavePlaybackStorage.root)?.id, folderPath: song.folder)
+            }
+            try await WaveWidgetBrowserService.shared.publishLocal(items, folders: LocalSong.playlistFolders(for: songs))
+            WidgetCenter.shared.reloadAllTimelines()
+        } catch { /* The visible app can present local storage errors after authentication. */ }
     }
 }

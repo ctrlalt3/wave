@@ -38,7 +38,7 @@ extension WaveAPI {
     }
 }
 struct CloudLibrarySection: View {
-    @AppStorage("wave.server") private var server = ""
+    @AppStorage("wave.server") private var server = WaveServerSettings.defaultAddress
     @EnvironmentObject private var local: LocalLibrary
     @EnvironmentObject private var preferences: LibraryPreferences
     @State private var busy = false

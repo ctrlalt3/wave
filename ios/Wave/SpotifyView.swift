@@ -61,7 +61,7 @@ actor SpotifyCatalog {
 }
 
 struct SpotifyView: View {
-    @AppStorage("wave.server") private var server = "https://tulopetas.duckdns.org/wave/"
+    @AppStorage("wave.server") private var server = WaveServerSettings.defaultAddress
     @Environment(\.openURL) private var openURL
     @State private var catalog = SpotifyCatalog()
     @State private var query = ""

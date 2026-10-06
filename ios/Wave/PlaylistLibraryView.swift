@@ -4,7 +4,7 @@ struct PlaylistLibraryView: View {
     @EnvironmentObject private var preferences: LibraryPreferences
     @EnvironmentObject private var local: LocalLibrary
     @EnvironmentObject private var device: DeviceMusicLibrary
-    @AppStorage("wave.server") private var server = "https://tulopetas.duckdns.org/wave/"
+    @AppStorage("wave.server") private var server = WaveServerSettings.defaultAddress
     private var visiblePlaylists: [FolderPlaylist] { preferences.state.visiblePlaylists }
     var body: some View {
         List {
