@@ -12,6 +12,10 @@ struct WaveApp: App {
     @StateObject private var local = LocalLibrary()
     @StateObject private var device = DeviceMusicLibrary()
     @StateObject private var preferences = LibraryPreferences()
+    init() {
+        WaveServerSettings.prepareDefaults()
+        Task { await WaveWidgetBootstrap.refresh() }
+    }
     var body: some Scene {
         WindowGroup {
             WaveHome().environmentObject(player).environmentObject(player.progress).environmentObject(local).environmentObject(device).environmentObject(preferences)
@@ -35,7 +39,7 @@ enum WaveSection: String, CaseIterable, Identifiable {
 }
 
 struct WaveHome: View {
-    @AppStorage("wave.server") private var synchronizationServer = ""
+    @AppStorage("wave.server") private var synchronizationServer = WaveServerSettings.defaultAddress
     @Environment(\.scenePhase) private var phase
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var section: WaveSection = .server
@@ -65,11 +69,13 @@ struct WaveHome: View {
             .background(WaveTheme.background)
             .accessibilityHidden(showsDock)
             .environment(\.waveLayout, measured)
-            .overlay {
-                if showsDock {
-                    WaveDockView { manualDock = false; dockDismissed = true }
-                        .environment(\.waveLayout, measured)
-                }
+            .fullScreenCover(isPresented: Binding(get: { showsDock }, set: { presented in
+                if !presented { manualDock = false; dockDismissed = true }
+            })) {
+                WaveDockView(protectedInsets: geometry.safeAreaInsets) { manualDock = false; dockDismissed = true }
+                    .ignoresSafeArea(.container)
+                    .statusBarHidden(true)
+                    .environment(\.waveLayout, measured)
             }
             .onChange(of: measured, initial: true) { _, value in layout = value }
         }
@@ -108,7 +114,7 @@ struct WaveHome: View {
         let songs = local.songs.filter { !$0.hidden }.map { song in
             WaveWidgetBrowserItem(id: song.id, title: song.name, subtitle: song.artist, kind: .song, playbackID: local.playable(song).id, folderPath: song.folder)
         }
-        let folders = local.songs.filter { !$0.hidden }.map(\.folder)
+        let folders = LocalSong.playlistFolders(for: local.songs)
         let server = synchronizationServer
         widgetCatalogTask?.cancel()
         widgetCatalogTask = Task {
@@ -195,7 +201,7 @@ struct WaveHome: View {
 
 struct ServerLibraryView: View {
     @EnvironmentObject private var preferences: LibraryPreferences
-    @AppStorage("wave.server") private var server = "https://tulopetas.duckdns.org/wave/"
+    @AppStorage("wave.server") private var server = WaveServerSettings.defaultAddress
     @State private var folders: [WaveFolder] = []
     @State private var api: WaveAPI?
     @State private var loading = false
@@ -355,7 +361,7 @@ struct LocalLibraryView: View {
     @State private var descending = false
     @State private var likedOnly = false
     private var folders: [String] {
-        preferences.state.visiblePlaylists.filter { $0.source == .local }.map(\.folder)
+        LocalSong.childFolders(in: nil, songs: local.songs)
     }
     private var visibleFolders: [String] {
         folders.filter { folder in
@@ -396,7 +402,7 @@ struct LocalLibraryView: View {
                             }
                         }
                 }
-            } header: { WaveSectionHeader(title: "Mis playlist · \(visibleFolders.count)") }
+            } header: { WaveSectionHeader(title: "Carpetas · \(visibleFolders.count)") }
             Section("Música de tu dispositivo") {
                 NavigationLink { DeviceMusicLibraryView() } label: { PlaylistRow(name: "Biblioteca de Música", count: device.authorization == .authorized ? device.songs.count : nil, subtitle: "Canciones, álbumes y playlists") }.listRowBackground(WaveTheme.surface)
             }
@@ -436,7 +442,7 @@ struct LocalTracksView: View {
     private var children: [String] {
         guard let folder else { return [] }
         let candidates = local.songs(in: nil, recursive: true, advanced: advanced).filter { !(favoritesOnly || likedOnly) || local.liked($0, in: preferences) }
-        let folders = LocalSong.childFolders(in: folder, songs: candidates).filter { child in
+        let folders = LocalSong.childFolders(in: folder, songs: (favoritesOnly || likedOnly) ? candidates : local.songs).filter { child in
             search.isEmpty || child.localizedCaseInsensitiveContains(search) || candidates.contains {
                 ($0.folder == child || $0.folder.hasPrefix(child + "/")) && ($0.name + " " + $0.artist).localizedCaseInsensitiveContains(search)
             }
@@ -518,7 +524,7 @@ struct WaveSettingsView: View {
     @AppStorage("wave.appearance") private var appearance = WaveAppearance.system.rawValue
     @AppStorage("wave.accent") private var accent = WaveAccent.system.rawValue
     @AppStorage("wave.liquidGlass") private var liquidGlass = true
-    @AppStorage("wave.server") private var server = "https://tulopetas.duckdns.org/wave/"
+    @AppStorage("wave.server") private var server = WaveServerSettings.defaultAddress
     @State private var draft = ""
     @State private var notice: String?
     var body: some View {
@@ -532,7 +538,7 @@ struct WaveSettingsView: View {
             Section("Servidor Wave") {
                 TextField("URL HTTPS del servidor", text: $draft).textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
                 Button("Guardar conexión") {
-                    do { _ = try WaveAPI(server: draft); server = draft; notice = "Conexión guardada." }
+                    do { let api = try WaveAPI(server: draft); server = api.base.absoluteString; notice = "Conexión guardada." }
                     catch { notice = error.localizedDescription }
                 }
                 if let notice { Text(notice).font(.caption) }
@@ -540,7 +546,6 @@ struct WaveSettingsView: View {
             Section("Horizontal y En reposo") {
                 Toggle("En reposo al cargar en horizontal", isOn: $automaticDock)
                 Toggle("Atenuar tras 20 segundos sin tocar", isOn: $dimWhenIdle)
-                Text("Toca la pantalla para iluminarla. La atenuación sólo afecta a la vista de Wave.").font(.caption).foregroundStyle(WaveTheme.secondary)
                 Text("El menú aparece a la izquierda al girar el dispositivo. La vista En reposo de Wave muestra reloj y música mientras la app está abierta.").font(.caption).foregroundStyle(WaveTheme.secondary)
                 if !WaveWidgetStore.available { Text("Los widgets no están conectados. Revisa las instrucciones de instalación de esta versión.").font(.caption).foregroundStyle(WaveTheme.secondary) }
                 Text("Los widgets Elegir canción y Reproduciendo permiten seleccionar música y controlarla desde Inicio o En reposo de iOS. El widget grande Biblioteca y reproductor reúne ambos.").font(.caption).foregroundStyle(WaveTheme.secondary)
@@ -549,7 +554,7 @@ struct WaveSettingsView: View {
                 Text("En Mi iPhone o Mi iPad puedes abrir tu biblioteca de Música o importar archivos desde Archivos.")
                 Text("Los originales permanecen en su ubicación. Las copias importadas ocupan espacio en este dispositivo.")
             }.font(.subheadline).foregroundStyle(WaveTheme.secondary).listRowBackground(WaveTheme.surface)
-            Section("Wave para iOS · 0.12.0") {
+            Section("Wave para iOS · 0.11.5") {
                 Text("Servidor, archivos locales y biblioteca de Música del dispositivo.")
                 Text("Versión instalada: \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—") · build \(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—")").font(.caption.monospacedDigit())
             }.font(.caption).listRowBackground(WaveTheme.surface)
