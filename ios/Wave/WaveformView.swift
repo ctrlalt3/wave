@@ -7,64 +7,24 @@ import CryptoKit
 actor WaveformCache {
     static let shared = WaveformCache()
     private var memory: [URL: [Double]] = [:]
-    private let loader: @Sendable (URL) async -> [Double]?
-    init() { loader = { await Self.load($0) } }
-    init(loader: @escaping @Sendable (URL) async -> [Double]?) { self.loader = loader }
-    private struct Work {
-        let id = UUID()
-        let task: Task<[Double]?, Never>
-        var consumers: Set<UUID>
-    }
-    private var pending: [URL: Work] = [:]
-
     func samples(for url: URL) async -> [Double]? {
-        guard !Task.isCancelled else { return nil }
         if let samples = memory[url] { return samples }
-        let consumer = UUID()
-        let work: Work
-        if var existing = pending[url] {
-            existing.consumers.insert(consumer)
-            pending[url] = existing
-            work = existing
-        } else {
-            let loader = self.loader
-            work = Work(task: Task.detached(priority: .utility) { await loader(url) }, consumers: [consumer])
-            pending[url] = work
-        }
-        let result = await withTaskCancellationHandler {
-            await work.task.value
-        } onCancel: {
-            Task { await self.release(url, workID: work.id, consumer: consumer) }
-        }
-        release(url, workID: work.id, consumer: consumer)
-        guard !Task.isCancelled else { return nil }
-        if let result {
-            if memory.count >= 32 { memory.removeAll() }
-            memory[url] = result
-        }
-        return result
-    }
-    private func release(_ url: URL, workID: UUID, consumer: UUID) {
-        guard var work = pending[url], work.id == workID else { return }
-        work.consumers.remove(consumer)
-        if work.consumers.isEmpty {
-            work.task.cancel()
-            pending[url] = nil
-        } else { pending[url] = work }
-    }
-    // Disk access, download and PCM analysis all run off the UI thread.
-    private static func load(_ url: URL) async -> [Double]? {
         let directory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("Waveforms", isDirectory: true)
         let key = SHA256.hash(data: Data(url.absoluteString.utf8)).map { String(format: "%02x", $0) }.joined()
         let file = directory.appendingPathComponent(key + ".json")
         if let modified = try? file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate,
            Date().timeIntervalSince(modified) < 86_400,
            let data = try? Data(contentsOf: file), let values = try? JSONDecoder().decode([Double].self, from: data), !values.isEmpty {
-            return values
+            memory[url] = values; return values
         }
-        guard !Task.isCancelled, let values = await WaveformAnalyzer.read(url), !Task.isCancelled else { return nil }
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        if let data = try? JSONEncoder().encode(values) { try? data.write(to: file, options: .atomic) }
+        let task = Task.detached(priority: .utility) { await WaveformAnalyzer.read(url) }
+        let values = await withTaskCancellationHandler { await task.value } onCancel: { task.cancel() }
+        if let values, !Task.isCancelled {
+            if memory.count > 32 { memory.removeAll() }
+            memory[url] = values
+            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            if let data = try? JSONEncoder().encode(values) { try? data.write(to: file, options: .atomic) }
+        }
         return values
     }
 }
@@ -129,12 +89,11 @@ struct WaveformSeekBar: View {
     let song: PlaybackSong
     var onArtwork = false
     @EnvironmentObject private var player: WavePlayer
-    @EnvironmentObject private var progress: WavePlaybackProgress
     @State private var samples: [Double] = []
     @State private var loading = true
-    @GestureState private var dragTime: Double? = nil
-    private var duration: Double { max(0, max(progress.duration, song.track.duration)) }
-    private var position: Double { dragTime ?? progress.elapsed }
+    @State private var dragTime: Double?
+    private var duration: Double { max(0, max(player.duration, song.track.duration)) }
+    private var position: Double { dragTime ?? player.elapsed }
     var body: some View {
         VStack(spacing: 6) {
             GeometryReader { geometry in
@@ -150,13 +109,12 @@ struct WaveformSeekBar: View {
                         context.fill(path, with: .color(played ? (onArtwork ? .white : WaveTheme.accent) : (onArtwork ? .white.opacity(0.35) : WaveTheme.secondary.opacity(0.25))))
                     }
                 }.contentShape(Rectangle())
-                    .highPriorityGesture(DragGesture(minimumDistance: 0).updating($dragTime) { value, time, _ in
+                    .highPriorityGesture(DragGesture(minimumDistance: 0).onChanged { value in
                         guard duration > 0 else { return }
-                        time = min(1, max(0, value.location.x / max(1, geometry.size.width))) * duration
-                    }.onEnded { value in
-                        guard duration > 0, player.current?.id == song.id else { return }
-                        let target = min(1, max(0, value.location.x / max(1, geometry.size.width))) * duration
-                        player.seek(target)
+                        dragTime = min(1, max(0, value.location.x / max(1, geometry.size.width))) * duration
+                    }.onEnded { _ in
+                        if let dragTime { player.seek(dragTime) }
+                        dragTime = nil
                     })
                     .accessibilityElement().accessibilityLabel("Posición de reproducción")
                     .accessibilityValue(WaveTheme.time(position) + " de " + WaveTheme.time(duration))
@@ -173,7 +131,7 @@ struct WaveformSeekBar: View {
             }.font(.caption.monospacedDigit()).foregroundStyle(onArtwork ? Color.white.opacity(0.9) : WaveTheme.secondary)
         }
         .task(id: song.id) {
-            samples = []; loading = true
+            samples = []; loading = true; dragTime = nil
             guard let url = song.url else { loading = false; return }
             let result = await WaveformCache.shared.samples(for: url)
             guard !Task.isCancelled else { return }

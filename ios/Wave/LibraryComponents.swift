@@ -33,10 +33,6 @@ struct TrackRow: View {
     var artwork: MPMediaItemArtwork? = nil
     var remoteCover: URL? = nil
     var audioURL: URL? = nil
-    // Carpeta real de la canción (LocalSong.folder). Solo se pasa desde listas
-    // locales con carpeta; sirve para diagnosticar por qué una canción con Me
-    // gusta no aparece en la playlist de su propia carpeta.
-    var folder: String? = nil
     var body: some View {
         HStack(spacing: 12) {
             WaveArtwork(artwork: artwork, remoteURL: remoteCover, audioURL: audioURL)
@@ -44,12 +40,11 @@ struct TrackRow: View {
                 Text(track.name).font(.subheadline.weight(.medium)).foregroundStyle(WaveTheme.ink).lineLimit(2)
                 Text(track.artist).font(.caption).foregroundStyle(WaveTheme.secondary).lineLimit(1)
                 if advanced { Text(track.filename).font(.caption2.monospaced()).foregroundStyle(WaveTheme.secondary).lineLimit(1) }
-                if advanced, let folder { Text("Carpeta: \(folder)").font(.caption2.monospaced()).foregroundStyle(WaveTheme.secondary).lineLimit(1) }
             }
             Spacer(minLength: 8)
             if active { Image(systemName: "speaker.wave.2").foregroundStyle(WaveTheme.accent) }
             Text(WaveTheme.time(track.duration)).font(.caption.monospacedDigit()).foregroundStyle(WaveTheme.secondary)
-        }.padding(.vertical, 5).padding(.leading, 12).frame(maxWidth: .infinity, minHeight: 56, alignment: .leading).contentShape(Rectangle())
+        }.padding(.vertical, 5)
     }
 }
 
@@ -71,7 +66,7 @@ struct TrackSortMenu: View {
     var body: some View {
         Menu {
             Picker("Ordenar por", selection: $sort) { ForEach(TrackSort.allCases, id: \.self) { Text($0.rawValue).tag($0) } }
-        } label: { Label(sort.rawValue, systemImage: "arrow.up.arrow.down").font(.caption).padding(.horizontal, 12).padding(.vertical, 10).modifier(WaveGlassPanel(radius: 18)) }
+        } label: { Label(sort.rawValue, systemImage: "arrow.up.arrow.down").font(.caption) }
     }
 }
 
@@ -91,74 +86,62 @@ struct TrackTools: View {
     }
 }
 
+// Kept outside the scrolling list so search remains available at every position.
+struct LibrarySearchBar: View {
+    @Binding var text: String
+    let prompt: String
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass").foregroundStyle(WaveTheme.secondary)
+            TextField(prompt, text: $text).textInputAutocapitalization(.never).autocorrectionDisabled()
+            if !text.isEmpty {
+                Button { text = "" } label: { Image(systemName: "xmark.circle.fill") }
+                    .foregroundStyle(WaveTheme.secondary).accessibilityLabel("Borrar búsqueda")
+                    .frame(minWidth: 44, minHeight: 44)
+            }
+        }
+        .padding(.horizontal, 14).frame(minHeight: 48)
+        .background(WaveTheme.surface, in: RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 16).padding(.top, 16).padding(.bottom, 12)
+        .background(WaveTheme.background)
+    }
+}
+
 struct LocalPlaylistRow: View {
     let folder: String
     @EnvironmentObject private var local: LocalLibrary
-    private var summary: LocalFolderSummary? { local.folderSummaries[folder] }
+    private var songs: [LocalSong] {
+        local.songs.filter { !$0.hidden && ($0.folder == folder || $0.folder.hasPrefix(folder + "/")) }
+    }
+    private var first: LocalSong? {
+        // Prefer this folder, then the first nested folder; use its saved song order.
+        let firstFolder = songs.map(\.folder).sorted { $0.localizedStandardCompare($1) == .orderedAscending }.first
+        return songs.first { $0.folder == firstFolder }
+    }
     var body: some View {
-        PlaylistRow(name: folder.split(separator: "/").last.map(String.init) ?? folder, count: summary?.count ?? 0,
-                    subtitle: folder.contains("/") ? folder : nil, audioURL: summary.flatMap { local.playable($0.first).url })
+        PlaylistRow(name: folder.split(separator: "/").last.map(String.init) ?? folder, count: songs.count,
+                    subtitle: folder.contains("/") ? folder : nil, audioURL: first.flatMap { local.playable($0).url })
     }
 }
 
-private struct WavePageNavigation: ViewModifier {
+struct WavePageHeader: View {
     let title: String
-    let search: Binding<String>?
-    let prompt: String
-    @State private var chromeHidden = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @ViewBuilder func body(content: Content) -> some View {
-        if let search {
-            navigation(content)
-                .searchable(text: search, placement: .navigationBarDrawer(displayMode: .automatic), prompt: Text(prompt))
-                .textInputAutocapitalization(.never).autocorrectionDisabled()
-        } else { navigation(content) }
-    }
-    private func navigation(_ content: Content) -> some View {
-        content.navigationTitle(Text(title)).navigationBarTitleDisplayMode(.inline)
-            .background(WaveScrollChromeObserver { hidden in
-                guard chromeHidden != hidden else { return }
-                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) { chromeHidden = hidden }
-            })
-            .toolbar(chromeHidden ? .hidden : .visible, for: .navigationBar)
-            .onAppear { chromeHidden = false }
-            .toolbarBackground(WaveTheme.background, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
+    var search: Binding<String>? = nil
+    var prompt = "Buscar"
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title).font(.title2.weight(.semibold)).foregroundStyle(WaveTheme.ink)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 22).padding(.top, 20).padding(.bottom, search == nil ? 20 : 4)
+                .accessibilityAddTraits(.isHeader)
+            if let search { LibrarySearchBar(text: search, prompt: prompt) }
+        }.background(WaveTheme.background)
     }
 }
 
-private struct WaveLibraryStyle: ViewModifier {
-    @Environment(\.waveLayout) private var layout
-    func body(content: Content) -> some View {
-        content.frame(maxWidth: .infinity, maxHeight: .infinity).listStyle(.plain).listSectionSpacing(layout.compactHeader ? 8 : 20).scrollContentBackground(.hidden)
-            .contentMargins(.horizontal, layout.usesSidebar ? 4 : 12, for: .scrollContent)
-            .contentMargins(.top, layout.compactHeader ? 0 : 8, for: .scrollContent)
-            .contentMargins(.bottom, layout.compactHeader ? 12 : 32, for: .scrollContent).background(WaveTheme.background)
-    }
-}
 extension View {
-    func waveLibraryStyle() -> some View { modifier(WaveLibraryStyle()) }
-    func wavePage(title: String, search: Binding<String>? = nil, prompt: String = "Buscar") -> some View {
-        modifier(WavePageNavigation(title: title, search: search, prompt: prompt))
-    }
-}
-
-struct WaveHeartLabelStyle: LabelStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        HStack {
-            configuration.icon.foregroundStyle(.red)
-            configuration.title
-        }
-    }
-}
-
-struct WaveSectionHeader: View {
-    @Environment(\.waveLayout) private var layout
-    let title: String
-    var body: some View {
-        Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(WaveTheme.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, layout.compactHeader ? 4 : 10).background(WaveTheme.background)
-            .accessibilityAddTraits(.isHeader).textCase(nil)
+    func waveLibraryStyle() -> some View {
+        self.listStyle(.plain).listSectionSpacing(20).scrollContentBackground(.hidden)
+            .contentMargins(.bottom, 32, for: .scrollContent).background(WaveTheme.background)
     }
 }

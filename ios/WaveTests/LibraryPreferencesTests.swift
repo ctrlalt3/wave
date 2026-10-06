@@ -62,13 +62,6 @@ final class LibraryPreferencesTests: XCTestCase {
         XCTAssertEqual(reopened.favorites, ["local:one"])
     }
 
-    func testOldPreferenceFormatRetainsPreviouslySavedLocalHearts() throws {
-        let data = Data(#"{"favorites":["local:42"],"playlists":[]}"#.utf8)
-        let old = try JSONDecoder().decode(LibraryPreferencesState.self, from: data)
-        XCTAssertEqual(old.favorites, ["local:42"])
-        XCTAssertNil(old.reconciledServers)
-    }
-
     func testCorruptPreferencesAreNotReplaced() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)

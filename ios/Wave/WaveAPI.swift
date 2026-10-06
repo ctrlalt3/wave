@@ -82,7 +82,7 @@ struct WaveAPI {
 
     private func request<T: Decodable>(_ components: [String], method: String = "GET", body: [String: Any]? = nil) async throws -> T {
         var request = URLRequest(url: url(components))
-        request.timeoutInterval = components.starts(with: ["api", "cloud"]) ? 300 : 25
+        request.timeoutInterval = 25
         // Hearts are shared mutable state; a cached read can undo a new save
         // when a folder synchronizes after returning from Discover.
         if components == ["api", "likes"] {
@@ -172,25 +172,9 @@ struct WaveAPI {
     }
 
     func toggleLike(_ path: String) async throws -> Bool {
-        try await changeLike(path, desired: nil)
-    }
-
-    func setLike(_ path: String, liked: Bool) async throws {
-        let result = try await changeLike(path, desired: liked)
-        if result == liked { return }
-        // Older Wave servers accept only toggle. Confirm the desired state
-        // with one additional change rather than trusting an unconfirmed save.
-        let retry = try await changeLike(path, desired: liked)
-        guard retry == liked else {
-            throw Failure(message: "El servidor no confirmó Me gusta. Vuelve a intentarlo.")
-        }
-    }
-    private func changeLike(_ path: String, desired: Bool?) async throws -> Bool {
         guard Self.safePath(path) else { throw Failure(message: "Ruta no válida.") }
         struct Response: Decodable { let liked: Bool }
-        var body: [String: Any] = ["track": path]
-        if let desired { body["liked"] = desired }
-        let response: Response = try await request(["api", "like"], method: "POST", body: body)
+        let response: Response = try await request(["api", "like"], method: "POST", body: ["track": path])
         return response.liked
     }
 }

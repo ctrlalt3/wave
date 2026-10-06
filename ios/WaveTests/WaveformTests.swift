@@ -38,30 +38,3 @@ final class WaveformTests: XCTestCase {
         XCTAssertNil(samples)
     }
 }
-
-private actor WaveformLoadCounter {
-    var loads = 0
-    func load(_ url: URL) async -> [Double]? {
-        loads += 1
-        try? await Task.sleep(nanoseconds: 50_000_000)
-        return [0.1, 0.8]
-    }
-    func count() -> Int { loads }
-}
-
-final class WaveformCacheTests: XCTestCase {
-    func testConcurrentViewsShareOneAnalysisAndLaterReuseMemory() async {
-        let counter = WaveformLoadCounter()
-        let cache = WaveformCache(loader: { await counter.load($0) })
-        let url = URL(fileURLWithPath: "/fixture/\(UUID().uuidString).wav")
-        async let first = cache.samples(for: url)
-        async let second = cache.samples(for: url)
-        let results = await (first, second)
-        XCTAssertEqual(results.0, [0.1, 0.8])
-        XCTAssertEqual(results.1, results.0)
-        let again = await cache.samples(for: url)
-        XCTAssertEqual(again, results.0)
-        let loads = await counter.count()
-        XCTAssertEqual(loads, 1)
-    }
-}
