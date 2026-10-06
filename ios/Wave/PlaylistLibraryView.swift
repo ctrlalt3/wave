@@ -28,8 +28,8 @@ struct PlaylistLibraryView: View {
                         .swipeActions { Button("Quitar playlist", role: .destructive) { Task { await preferences.remove(playlist) } }.disabled(preferences.saving) }
                 }
             } header: { WaveSectionHeader(title: "Carpetas como playlists") }
-        }.waveLibraryStyle()
-            .wavePage(title: "Playlists").task { device.reload() }
+        }.waveLibraryStyle().navigationTitle("").navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: "Playlists") }.task { device.reload() }
     }
     @ViewBuilder private func destination(_ playlist: FolderPlaylist) -> some View {
         if playlist.source == .local {
