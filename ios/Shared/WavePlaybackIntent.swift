@@ -13,6 +13,7 @@ struct WavePlaybackIntent: AudioPlaybackIntent {
     static var title: LocalizedStringResource = "Controlar la música de Wave"
     static var description = IntentDescription("Controla la reproducción de Wave desde sus widgets.")
     static var openAppWhenRun = false
+    static var authenticationPolicy: IntentAuthenticationPolicy { .alwaysAllowed }
     @Parameter(title: "Acción") var command: WaveWidgetPlaybackCommand
     init() { command = .toggle }
     init(command: WaveWidgetPlaybackCommand) { self.command = command }
@@ -28,6 +29,7 @@ struct WavePlaybackIntent: AudioPlaybackIntent {
 struct WaveBrowseLibraryIntent: AppIntent {
     static var title: LocalizedStringResource = "Navegar por la biblioteca de Wave"
     static var openAppWhenRun = false
+    static var authenticationPolicy: IntentAuthenticationPolicy { .alwaysAllowed }
     @Parameter(title: "Acción") var action: String
     @Parameter(title: "Carpeta") var item: String
     @Parameter(title: "Revisión") var revision: String
@@ -47,6 +49,7 @@ struct WaveBrowseLibraryIntent: AppIntent {
 struct WaveChooseSongIntent: AudioPlaybackIntent {
     static var title: LocalizedStringResource = "Reproducir una canción de Wave"
     static var openAppWhenRun = false
+    static var authenticationPolicy: IntentAuthenticationPolicy { .alwaysAllowed }
     @Parameter(title: "Biblioteca") var source: String
     @Parameter(title: "Canción") var songID: String
     @Parameter(title: "Servidor") var serverID: String
@@ -59,6 +62,22 @@ struct WaveChooseSongIntent: AudioPlaybackIntent {
         if let source = WaveWidgetLibrarySource(rawValue: source) {
             await WavePlayer.shared.chooseWidgetSong(source: source, id: songID, serverID: serverID)
         }
+        #endif
+        return .result()
+    }
+}
+
+struct WaveFavoriteIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Me gusta en Wave"
+    static var openAppWhenRun = false
+    static var authenticationPolicy: IntentAuthenticationPolicy { .alwaysAllowed }
+    @Parameter(title: "Canción") var songID: String
+    @Parameter(title: "Marcar Me gusta") var liked: Bool
+    init() { songID = ""; liked = true }
+    init(songID: String, liked: Bool) { self.songID = songID; self.liked = liked }
+    @MainActor func perform() async throws -> some IntentResult {
+        #if WAVE_APP
+        await WavePlayer.shared.favoriteWidgetSong(id: songID, liked: liked)
         #endif
         return .result()
     }

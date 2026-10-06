@@ -154,3 +154,19 @@ extension WavePlayer {
         publishWidgetSnapshot(force: true)
     }
 }
+
+extension WavePlayer {
+    func favoriteWidgetSong(id: String, liked: Bool) async {
+        guard !id.isEmpty, await restoreWidgetQueue() else { return }
+        let preferences = await widgetLikePreferences()
+        guard let song = current, song.id == id else {
+            error = "La canción ha cambiado. Vuelve a pulsar el corazón en el widget."
+            publishWidgetSnapshot(force: true); return
+        }
+        if await preferences.setLike(song, liked: liked) {
+            widgetCurrentLiked = current.map { preferences.liked($0.id) } ?? false
+            error = nil
+        } else { error = preferences.error ?? "No se pudo guardar Me gusta. Vuelve a intentarlo." }
+        publishWidgetSnapshot(force: true)
+    }
+}

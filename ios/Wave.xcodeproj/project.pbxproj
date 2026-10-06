@@ -32,6 +32,12 @@
 			"path" = "WavePlaybackIntent.swift";
 			"sourceTree" = "<group>";
 		};
+		"F15A0383C72ED35EBF19B97C" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "WaveServerSettings.swift";
+			"sourceTree" = "<group>";
+		};
 		"F3D5E822B384AB1547710AE2" = {
 			"isa" = "PBXFileReference";
 			"lastKnownFileType" = "sourcecode.swift";
@@ -44,19 +50,13 @@
 			"path" = "WaveWidgetState.swift";
 			"sourceTree" = "<group>";
 		};
-		"32E238B4D521D8B51CCE571E" = {
-			"isa" = "PBXFileReference";
-			"lastKnownFileType" = "sourcecode.swift";
-			"path" = "WidgetExplorerLayout.swift";
-			"sourceTree" = "<group>";
-		};
 		"748D7B2B50E4ECBF863B0EEE" = {
 			"isa" = "PBXGroup";
 			"children" = (
 				"B72472084E136E2282474664",
+				"F15A0383C72ED35EBF19B97C",
 				"F3D5E822B384AB1547710AE2",
 				"1A08AC4CE72FDF42DC9A2B38",
-				"32E238B4D521D8B51CCE571E",
 			);
 			"path" = "Shared";
 			"sourceTree" = "<group>";
@@ -180,16 +180,6 @@
 		"F7EB7AF36EE23B65142286CF" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "721F41ADCC428C4B6F7B4E48";
-		};
-		"57231E84E679023F0CDE8E7C" = {
-			"isa" = "PBXFileReference";
-			"lastKnownFileType" = "sourcecode.swift";
-			"path" = "ScrollChrome.swift";
-			"sourceTree" = "<group>";
-		};
-		"9CA39172FDC977DE8E5A4401" = {
-			"isa" = "PBXBuildFile";
-			"fileRef" = "57231E84E679023F0CDE8E7C";
 		};
 		"AB7DB711824D3BC3ECDF21EA" = {
 			"isa" = "PBXFileReference";
@@ -315,6 +305,10 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "B72472084E136E2282474664";
 		};
+		"F100D37F5EA0F482DE13791A" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "F15A0383C72ED35EBF19B97C";
+		};
 		"0311FEFC78F1F7764CBF65AB" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "F3D5E822B384AB1547710AE2";
@@ -322,10 +316,6 @@
 		"0CD693FEA3CF3C10EDCBFB8D" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "1A08AC4CE72FDF42DC9A2B38";
-		};
-		"AE65AF4CB41369F7C4F19F75" = {
-			"isa" = "PBXBuildFile";
-			"fileRef" = "32E238B4D521D8B51CCE571E";
 		};
 		"2E5B5A2640EEA2B556E3063F" = {
 			"isa" = "PBXGroup";
@@ -342,7 +332,6 @@
 				"4077C0F84174580CDF436DAF",
 				"503A7474E4C9B49507539926",
 				"721F41ADCC428C4B6F7B4E48",
-				"57231E84E679023F0CDE8E7C",
 				"AB7DB711824D3BC3ECDF21EA",
 				"E54A5E50AF589F6926D3EF7A",
 				"328A6AFA30DCC158DFA1E8F2",
@@ -375,7 +364,6 @@
 				"ADA2F523EBE6FCC57F999E2D",
 				"4D40B22763E831A776DBEE3F",
 				"F7EB7AF36EE23B65142286CF",
-				"9CA39172FDC977DE8E5A4401",
 				"A9DCE736B75A24E9ACF87623",
 				"685B33967746CF8C60A35ECE",
 				"202D137F4F1C3D86020B3261",
@@ -389,9 +377,9 @@
 				"8776E074506D6648E512BABA",
 				"132E36C69788F2B2BA14BB47",
 				"AB2F910797F457F7A91EEB6F",
+				"F100D37F5EA0F482DE13791A",
 				"0311FEFC78F1F7764CBF65AB",
 				"0CD693FEA3CF3C10EDCBFB8D",
-				"AE65AF4CB41369F7C4F19F75",
 			);
 			"runOnlyForDeploymentPostprocessing" = 0;
 		};
@@ -469,15 +457,15 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "7BC71752206DFF61051936EC";
 		};
-		"0E31204C16DB0E81730FADFD" = {
+		"96EF29D7FCCCE279401C8077" = {
 			"isa" = "PBXFileReference";
 			"lastKnownFileType" = "sourcecode.swift";
-			"path" = "ScrollAndIdleTests.swift";
+			"path" = "ServerSettingsTests.swift";
 			"sourceTree" = "<group>";
 		};
-		"4FA3E2A7FC3F6160905852E8" = {
+		"107339AC707919DED717F0E2" = {
 			"isa" = "PBXBuildFile";
-			"fileRef" = "0E31204C16DB0E81730FADFD";
+			"fileRef" = "96EF29D7FCCCE279401C8077";
 		};
 		"83B82D624A6211BEBE07C199" = {
 			"isa" = "PBXFileReference";
@@ -528,7 +516,7 @@
 				"3BE3C8638A19C8A21EF9B5AB",
 				"D33ABE71811F44994AFE3116",
 				"7BC71752206DFF61051936EC",
-				"0E31204C16DB0E81730FADFD",
+				"96EF29D7FCCCE279401C8077",
 				"83B82D624A6211BEBE07C199",
 				"B813B67648B84CF65286ED24",
 				"523D0F5135EA7DA5A6A702EA",
@@ -547,7 +535,7 @@
 				"4F1F29ACB2101D2C79721018",
 				"F886F724ED4C81ABF6BF525A",
 				"FC4239241A03C62FD9675A19",
-				"4FA3E2A7FC3F6160905852E8",
+				"107339AC707919DED717F0E2",
 				"F796EB69FC8F13C3717B8069",
 				"61BF89652E0F19F9F31527CF",
 				"F0AED2C956FEC99BBCE9B61D",
@@ -568,16 +556,6 @@
 			"files" = (
 			);
 			"runOnlyForDeploymentPostprocessing" = 0;
-		};
-		"8B856B60094B64E3463C0A9A" = {
-			"isa" = "PBXFileReference";
-			"lastKnownFileType" = "sourcecode.swift";
-			"path" = "WaveFolderExplorerView.swift";
-			"sourceTree" = "<group>";
-		};
-		"3BE859B35161757EC177B186" = {
-			"isa" = "PBXBuildFile";
-			"fileRef" = "8B856B60094B64E3463C0A9A";
 		};
 		"6E3EE1414AB7CE933A4B542A" = {
 			"isa" = "PBXFileReference";
@@ -603,6 +581,10 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "B72472084E136E2282474664";
 		};
+		"01FCF63947368F9514AA4CE5" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "F15A0383C72ED35EBF19B97C";
+		};
 		"5E20CB641337D163DB6C5CD3" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "F3D5E822B384AB1547710AE2";
@@ -611,14 +593,9 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "1A08AC4CE72FDF42DC9A2B38";
 		};
-		"CC5DC973EA5E4A65D5445D66" = {
-			"isa" = "PBXBuildFile";
-			"fileRef" = "32E238B4D521D8B51CCE571E";
-		};
 		"0D4527E87A69E5D82BADF0DE" = {
 			"isa" = "PBXGroup";
 			"children" = (
-				"8B856B60094B64E3463C0A9A",
 				"6E3EE1414AB7CE933A4B542A",
 				"D9933BC2FD9F414CDA2777D8",
 			);
@@ -629,13 +606,12 @@
 			"isa" = "PBXSourcesBuildPhase";
 			"buildActionMask" = 2147483647;
 			"files" = (
-				"3BE859B35161757EC177B186",
 				"147A322EA36F3BCD20C3A06B",
 				"4B8F1FA1B62648BF23605B54",
 				"5B93FE91EAE38A740C3459F9",
+				"01FCF63947368F9514AA4CE5",
 				"5E20CB641337D163DB6C5CD3",
 				"4D1E68FFBFE7BAAD930D1DC0",
-				"CC5DC973EA5E4A65D5445D66",
 			);
 			"runOnlyForDeploymentPostprocessing" = 0;
 		};
@@ -722,8 +698,8 @@
 				"TARGETED_DEVICE_FAMILY" = "1,2";
 				"CLANG_ENABLE_MODULES" = "YES";
 				"CODE_SIGN_STYLE" = "Automatic";
-				"MARKETING_VERSION" = "0.12.0";
-				"CURRENT_PROJECT_VERSION" = "27";
+				"MARKETING_VERSION" = "0.11.6";
+				"CURRENT_PROJECT_VERSION" = "34";
 				"PRODUCT_NAME" = "$(TARGET_NAME)";
 				"PRODUCT_BUNDLE_IDENTIFIER" = "app.wave.music.ios.widgets";
 				"INFOPLIST_FILE" = "WaveWidgets/Info.plist";
@@ -751,8 +727,8 @@
 				"TARGETED_DEVICE_FAMILY" = "1,2";
 				"CLANG_ENABLE_MODULES" = "YES";
 				"CODE_SIGN_STYLE" = "Automatic";
-				"MARKETING_VERSION" = "0.12.0";
-				"CURRENT_PROJECT_VERSION" = "27";
+				"MARKETING_VERSION" = "0.11.6";
+				"CURRENT_PROJECT_VERSION" = "34";
 				"PRODUCT_NAME" = "$(TARGET_NAME)";
 				"PRODUCT_BUNDLE_IDENTIFIER" = "app.wave.music.ios.widgets";
 				"INFOPLIST_FILE" = "WaveWidgets/Info.plist";
@@ -816,8 +792,8 @@
 				"TARGETED_DEVICE_FAMILY" = "1,2";
 				"CLANG_ENABLE_MODULES" = "YES";
 				"CODE_SIGN_STYLE" = "Automatic";
-				"MARKETING_VERSION" = "0.12.0";
-				"CURRENT_PROJECT_VERSION" = "27";
+				"MARKETING_VERSION" = "0.11.6";
+				"CURRENT_PROJECT_VERSION" = "34";
 				"PRODUCT_NAME" = "$(TARGET_NAME)";
 				"PRODUCT_BUNDLE_IDENTIFIER" = "app.wave.music.ios";
 				"INFOPLIST_FILE" = "Info.plist";
@@ -842,8 +818,8 @@
 				"TARGETED_DEVICE_FAMILY" = "1,2";
 				"CLANG_ENABLE_MODULES" = "YES";
 				"CODE_SIGN_STYLE" = "Automatic";
-				"MARKETING_VERSION" = "0.12.0";
-				"CURRENT_PROJECT_VERSION" = "27";
+				"MARKETING_VERSION" = "0.11.6";
+				"CURRENT_PROJECT_VERSION" = "34";
 				"PRODUCT_NAME" = "$(TARGET_NAME)";
 				"PRODUCT_BUNDLE_IDENTIFIER" = "app.wave.music.ios";
 				"INFOPLIST_FILE" = "Info.plist";
@@ -895,8 +871,8 @@
 				"TARGETED_DEVICE_FAMILY" = "1,2";
 				"CLANG_ENABLE_MODULES" = "YES";
 				"CODE_SIGN_STYLE" = "Automatic";
-				"MARKETING_VERSION" = "0.12.0";
-				"CURRENT_PROJECT_VERSION" = "27";
+				"MARKETING_VERSION" = "0.11.6";
+				"CURRENT_PROJECT_VERSION" = "34";
 				"PRODUCT_NAME" = "$(TARGET_NAME)";
 				"PRODUCT_BUNDLE_IDENTIFIER" = "app.wave.music.ios.tests";
 				"GENERATE_INFOPLIST_FILE" = "YES";
@@ -922,8 +898,8 @@
 				"TARGETED_DEVICE_FAMILY" = "1,2";
 				"CLANG_ENABLE_MODULES" = "YES";
 				"CODE_SIGN_STYLE" = "Automatic";
-				"MARKETING_VERSION" = "0.12.0";
-				"CURRENT_PROJECT_VERSION" = "27";
+				"MARKETING_VERSION" = "0.11.6";
+				"CURRENT_PROJECT_VERSION" = "34";
 				"PRODUCT_NAME" = "$(TARGET_NAME)";
 				"PRODUCT_BUNDLE_IDENTIFIER" = "app.wave.music.ios.tests";
 				"GENERATE_INFOPLIST_FILE" = "YES";

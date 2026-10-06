@@ -85,7 +85,7 @@ struct WaveAPI {
         request.timeoutInterval = components.starts(with: ["api", "cloud"]) ? 300 : 25
         // Hearts are shared mutable state; a cached read can undo a new save
         // when a folder synchronizes after returning from Discover.
-        if components == ["api", "likes"] {
+        if components.first == "api" {
             request.cachePolicy = .reloadIgnoringLocalCacheData
             request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
         }
@@ -97,7 +97,8 @@ struct WaveAPI {
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
               http.value(forHTTPHeaderField: "Content-Type")?.contains("application/json") == true else {
-            throw Failure(message: "El servidor no ha devuelto datos de Wave. Revisa su dirección.")
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            throw Failure(message: "No se pudo conectar con Wave en \(base.host ?? "servidor") (HTTP \(code)). Revisa la dirección HTTPS y vuelve a intentarlo.")
         }
         return try JSONDecoder().decode(T.self, from: data)
     }

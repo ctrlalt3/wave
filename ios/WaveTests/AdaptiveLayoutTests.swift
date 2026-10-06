@@ -9,7 +9,7 @@ final class AdaptiveLayoutTests: XCTestCase {
         XCTAssertEqual(portrait.sidebarWidth, 0)
         XCTAssertTrue(landscape.usesSidebar)
         XCTAssertTrue(landscape.compactSidebar)
-        XCTAssertEqual(landscape.sidebarWidth, 60)
+        XCTAssertEqual(landscape.sidebarWidth, 76)
         XCTAssertTrue(landscape.compactHeader)
     }
     func testSmallPhoneLandscapeAndNarrowMultitaskingRemainUsable() {
@@ -23,7 +23,7 @@ final class AdaptiveLayoutTests: XCTestCase {
         let tablet = WaveAdaptiveLayout(size: CGSize(width: 1194, height: 834))
         XCTAssertTrue(tablet.usesSidebar)
         XCTAssertFalse(tablet.compactSidebar)
-        XCTAssertEqual(tablet.sidebarWidth, 192)
+        XCTAssertEqual(tablet.sidebarWidth, 216)
         XCTAssertFalse(tablet.compactHeader)
     }
 }
