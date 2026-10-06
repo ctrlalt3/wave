@@ -61,14 +61,6 @@ actor LibraryPreferencesStorage {
         return try save(state)
     }
 
-    func linkLocalFavorites(_ links: [String: String]) throws -> LibraryPreferencesState {
-        var state = try read()
-        for (local, cloud) in links where state.favorites.contains(local) {
-            state.favorites.remove(local)
-            state.favorites.insert(cloud)
-        }
-        return try save(state)
-    }
     func favorite(_ id: String, liked: Bool) throws -> LibraryPreferencesState {
         var state = try read()
         if liked { state.favorites.insert(id) } else { state.favorites.remove(id) }
@@ -190,16 +182,6 @@ final class LibraryPreferences: ObservableObject {
             }
             state = try await storage.synchronizeServer(base, paths: paths, markReconciled: recovering)
         } catch { if !Task.isCancelled { self.error = "No se pudieron actualizar los likes del servidor: \(error.localizedDescription)" } }
-    }
-    func linkCloudFavorites(_ songs: [LocalSong]) async {
-        await beginSaving()
-        defer { finishSaving() }
-        let links = Dictionary(songs.compactMap { song -> (String, String)? in
-            guard let path = song.cloudPath, let server = song.cloudServer else { return nil }
-            return ("local:" + song.id, server + path)
-        }, uniquingKeysWith: { first, _ in first })
-        do { state = try await storage.linkLocalFavorites(links) }
-        catch { self.error = error.localizedDescription }
     }
     func addFolder(_ folder: String, source: FolderPlaylistSource, server: String? = nil) async {
         guard ready, WaveAPI.safePath(folder) else { return }
