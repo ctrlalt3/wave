@@ -82,7 +82,7 @@ struct WaveAPI {
 
     private func request<T: Decodable>(_ components: [String], method: String = "GET", body: [String: Any]? = nil) async throws -> T {
         var request = URLRequest(url: url(components))
-        request.timeoutInterval = components.starts(with: ["api", "cloud"]) ? 300 : 25
+        request.timeoutInterval = 25
         // Hearts are shared mutable state; a cached read can undo a new save
         // when a folder synchronizes after returning from Discover.
         if components == ["api", "likes"] {

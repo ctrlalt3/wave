@@ -19,7 +19,7 @@ struct PlaylistLibraryView: View {
                     NavigationLink { ServerFolderView(folder: WaveFolder(name: "Me gusta · Servidor", count: 0), api: api, allTracks: true, favoritesOnly: true) } label: { Label("Servidor Wave", systemImage: "icloud") }.listRowBackground(WaveTheme.surface)
                 }
             }
-            Section {
+            Section("Carpetas como playlists") {
                 if visiblePlaylists.isEmpty {
                     WaveMessage(title: "Tus carpetas, tus playlists.", detail: "En Mi iPhone añade una carpeta como playlist. En el servidor, abre una carpeta y pulsa el botón de añadir playlist.").listRowBackground(Color.clear)
                 }
@@ -27,9 +27,9 @@ struct PlaylistLibraryView: View {
                     destination(playlist).listRowBackground(WaveTheme.surface)
                         .swipeActions { Button("Quitar playlist", role: .destructive) { Task { await preferences.remove(playlist) } }.disabled(preferences.saving) }
                 }
-            } header: { WaveSectionHeader(title: "Carpetas como playlists") }
-        }.waveLibraryStyle()
-            .wavePage(title: "Playlists").task { device.reload() }
+            }
+        }.waveLibraryStyle().navigationTitle("").navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: "Playlists") }.task { device.reload() }
     }
     @ViewBuilder private func destination(_ playlist: FolderPlaylist) -> some View {
         if playlist.source == .local {

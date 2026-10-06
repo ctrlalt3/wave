@@ -61,14 +61,6 @@ actor LibraryPreferencesStorage {
         return try save(state)
     }
 
-    func linkLocalFavorites(_ links: [String: String]) throws -> LibraryPreferencesState {
-        var state = try read()
-        for (local, cloud) in links where state.favorites.contains(local) {
-            state.favorites.remove(local)
-            state.favorites.insert(cloud)
-        }
-        return try save(state)
-    }
     func favorite(_ id: String, liked: Bool) throws -> LibraryPreferencesState {
         var state = try read()
         if liked { state.favorites.insert(id) } else { state.favorites.remove(id) }
@@ -191,16 +183,6 @@ final class LibraryPreferences: ObservableObject {
             state = try await storage.synchronizeServer(base, paths: paths, markReconciled: recovering)
         } catch { if !Task.isCancelled { self.error = "No se pudieron actualizar los likes del servidor: \(error.localizedDescription)" } }
     }
-    func linkCloudFavorites(_ songs: [LocalSong]) async {
-        await beginSaving()
-        defer { finishSaving() }
-        let links = Dictionary(songs.compactMap { song -> (String, String)? in
-            guard let path = song.cloudPath, let server = song.cloudServer else { return nil }
-            return ("local:" + song.id, server + path)
-        }, uniquingKeysWith: { first, _ in first })
-        do { state = try await storage.linkLocalFavorites(links) }
-        catch { self.error = error.localizedDescription }
-    }
     func addFolder(_ folder: String, source: FolderPlaylistSource, server: String? = nil) async {
         guard ready, WaveAPI.safePath(folder) else { return }
         await beginSaving()
@@ -224,7 +206,6 @@ final class LibraryPreferences: ObservableObject {
 }
 struct LikeButton: View {
     let song: PlaybackSong
-    var compact = false
     @EnvironmentObject private var preferences: LibraryPreferences
     @Environment(\.colorScheme) private var scheme
     var body: some View {
@@ -232,7 +213,7 @@ struct LikeButton: View {
             Image(systemName: preferences.liked(song.id) ? "heart.fill" : "heart")
                 .foregroundStyle(preferences.liked(song.id) ? Color.red : (scheme == .dark ? Color.white : Color.black))
                 .shadow(color: (scheme == .dark ? Color.white : Color.black).opacity(0.15), radius: 2)
-                .frame(width: compact ? 44 : 48, height: compact ? 44 : 56).contentShape(Rectangle())
+                .frame(width: 48, height: 56).contentShape(Rectangle())
         }.buttonStyle(.borderless).disabled(!preferences.ready || preferences.pendingLikes.contains(song.id))
             .overlay {
                 if preferences.pendingLikes.contains(song.id) { ProgressView().tint(.red).allowsHitTesting(false) }

@@ -100,19 +100,19 @@ struct DeviceMusicLibraryView: View {
                 }
             }
         }.waveLibraryStyle()
-            
-            .wavePage(title: "Música del dispositivo")
+            .navigationTitle("").navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: "Música del dispositivo") }
             .task { library.reload() }.refreshable { library.reload() }
             .onChange(of: scenePhase) { _, value in if value == .active { library.reload() } }
     }
     private func collections(_ title: String, _ values: [DeviceCollection]) -> some View {
-        Section {
+        Section(title) {
             ForEach(values) { collection in
                 NavigationLink { DeviceSongsView(title: collection.title, songs: collection.songs) } label: {
                     PlaylistRow(name: collection.title, count: collection.songs.count, artwork: collection.songs.first?.item.artwork)
                 }.listRowBackground(WaveTheme.surface)
             }
-        } header: { WaveSectionHeader(title: title) }
+        }
     }
 }
 
@@ -137,8 +137,7 @@ struct DeviceSongsView: View {
         }
     }
     var body: some View {
-        let visible = self.visible
-        return List {
+        List {
             TrackSortMenu(sort: $sort).listRowBackground(Color.clear)
             Toggle("Solo en el dispositivo", isOn: $downloadedOnly).font(.subheadline).listRowBackground(Color.clear)
             if !favoritesOnly {
@@ -163,6 +162,6 @@ struct DeviceSongsView: View {
                 }
             }
         }.waveLibraryStyle()
-            .wavePage(title: title, search: $search, prompt: "Canción, artista o álbum")
+            .navigationTitle("").navigationBarTitleDisplayMode(.inline).safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: title, search: $search, prompt: "Canción, artista o álbum") }
     }
 }
