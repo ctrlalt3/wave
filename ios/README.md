@@ -1,39 +1,73 @@
-# Wave para iPhone e iPad · 0.12.0 (build 27)
+# Wave para iPhone e iPad · 0.11.7 (build 35)
 
-## Scroll a pantalla completa, explorador grande y atenuación · 0.12.0
+## Ajuste de Dynamic Island · 0.11.7
 
-- **Título y buscador se ocultan juntos** al bajar por una lista. Se observa el gesto de su `UIScrollView` nativo sin reemplazar su delegado ni añadir otro gesto de scroll. Al subir o volver al inicio reaparece la barra, incluidos Atrás y las acciones de la carpeta. Las variaciones pequeñas de dirección usan umbrales para evitar parpadeos.
-- Menú lateral de 60 puntos en formato compacto y 192 en ancho, con margen de 8 puntos; listas con menos margen horizontal. Se mantiene el fondo hasta los bordes y la protección de las áreas de cámara del dispositivo.
-- **En reposo de Wave usa toda la anchura para la biblioteca**: se retira la columna permanente del reproductor y se coloca una franja de controles abajo. La cabecera de la biblioteca integra el cierre, evitando otra fila superior. Se conservan Local/Servidor, carpetas y páginas de 24 elementos.
-- **Atenuación por inactividad**: la vista de Wave se oscurece después de 20 segundos sin tocar; al tocar o mover el dedo se ilumina de nuevo. El primer toque en la pantalla atenuada sirve para despertarla. La música y la selección continúan. La actividad se observa sin cancelar toques ni impedir scroll/slider. Se puede desactivar en Ajustes → Horizontal y En reposo. Se respeta el estado de la app, Reducir movimiento y VoiceOver.
-- **Anterior en el reproductor pequeño**, incluyendo el mismo widget pequeño usado en En reposo de iOS: anterior, reproducir/pausar y siguiente, con áreas de 44 puntos.
-- Nuevo **Wave · Explorador de carpetas**, adicional a los widgets existentes. Utiliza formatos grande y extra grande, sin márgenes del sistema añadidos: Local/Servidor, inicio, carpeta superior, actualización, ruta completa y reproducción directa. Ajusta filas al alto disponible y usa dos columnas en formatos anchos. La navegación es por páginas y botones; comparte estado con el selector, el reproductor y la biblioteca de Wave.
+Cuando el margen seguro de la pantalla cae del lado de la lista, las filas se desplazan para despejar la Dynamic Island y el reproductor cede ese ancho. Si el margen cae del lado del reproductor, se conserva la distribución anterior.
 
-### Límites del sistema y uso
+## Correcciones de biblioteca y acceso · 0.11.7
 
-El formato **grande** puede añadirse en Inicio del iPhone; el **extra grande** está disponible en iPad. Añade Explorador de carpetas desde la galería de widgets de Wave. Los widgets no tienen scroll libre ni pueden ocupar arbitrariamente todo el display. En reposo de iOS sigue usando los widgets pequeños; para navegar en toda la pantalla usa la vista En reposo dentro de Wave.
+- Navegación por carpeta → subcarpeta, pulsando o deslizando a la izquierda sobre una carpeta; deslizar a la derecha vuelve a la carpeta superior. La ruta y la flecha atrás comparten fila.
+- Se publican todas las carpetas de la música importada, incluso las que no pertenecen a una playlist seleccionada. Los cambios de carpetas sin canciones visibles también actualizan el catálogo. Las filas y carátulas mantienen un margen izquierdo moderado dentro del panel.
+- Dirección compartida del servidor para app y widgets: una configuración vacía recupera el servidor habitual y se conserva una dirección personalizada. Se ha comprobado aquí que sus endpoints de carpetas y canciones responden.
+- Se eliminan los títulos generales de página. Las filas se alinean a la izquierda; cambiar de carpeta mantiene la estructura estable mientras carga y evita que una actualización antigua sustituya la nueva lista.
+- Widget pequeño: anterior, reproducir/pausar, siguiente y corazón sin texto en una fila. El selector Local/Servidor está al lado de Actualizar.
+- Wave ya no muestra un bloqueo propio al abrir la app ni solicita Face ID para entrar.
 
-La atenuación de esta entrega sólo afecta al contenido de Wave; no cambia `UIScreen.brightness`, no fuerza una pantalla Always-On por hardware y no desactiva el bloqueo automático de iOS. El brillo y el modo En reposo del sistema los controla iOS.
+Los controles del widget siguen sujetos a las reglas que iOS aplica cuando el dispositivo está bloqueado.
 
-### Validación e instalación
+**Fuentes sin verificar en Xcode:** se validan estructura y sintaxis en Linux; la compilación, XCTest y revisión en dispositivo quedan pendientes. Ejecuta `python3 scripts/validate-xcode.py` en un Mac antes de considerar esta entrega verificada.
 
-Esta es una descarga de **fuentes pendientes de compilación con Xcode**. Se han ejecutado los controles del proyecto y del bloqueo de publicación y analizado la sintaxis Swift. Los XCTest incluidos cubren umbrales de scroll, inversión de dirección, posición inicial, geometría inválida, contador de inactividad, capacidad del widget y acción Inicio; necesitan ejecución en un Mac.
 
-Instala desde `Wave.xcodeproj`, conservando el mismo Team y App Group en Wave y WaveWidgets. Antes de publicar una versión verificada:
+## Ajustes de En reposo y controles del widget · 0.11.3
+
+Esta variante continúa sobre la base 0.11, con la presentación a pantalla completa de 0.11.2 y los ajustes solicitados:
+
+- Se elimina el encabezado general Biblioteca y su fila. El cierre se integra en los controles del selector.
+- El selector gana 12 puntos de margen superior y 10 a la izquierda; títulos y subtítulos se alinean explícitamente a la izquierda. Las canciones muestran una miniatura de 44 puntos: imagen incrustada para archivos locales y carátula de Wave para canciones del servidor. Si no hay imagen, se mantiene el símbolo de música.
+- El nombre de biblioteca es un menú **Local / Servidor**. La segunda zona es un menú de **carpetas** de la fuente actual, con ruta, inicio y salto directo entre carpetas conocidas; la flecha permite subir al padre.
+- Separación entre paneles de 14 puntos y reproductor 18 puntos más ancho que en 0.11.2. La lista conserva sus filas y páginas de 24 elementos.
+- Reproductor con nombre/artista arriba, portada mayor en el centro y barra y controles abajo. Me gusta sigue en la fila de transporte; no se añade scroll independiente al reproductor.
+- Atenuación de la vista de Wave tras 20 segundos sin tocar; tocar o desplazar ilumina de nuevo. Ajustes permite desactivarla. No se modifica el brillo global ni el bloqueo automático del dispositivo.
+- **Widget Wave · Reproduciendo**: anterior, reproducir/pausar, siguiente y Me gusta en el pequeño; corazón operativo en formatos mayores y controles compactos en el rectangular de pantalla bloqueada. El formato circular sigue dedicado a reproducir/pausar y el formato en línea es informativo.
+
+El corazón del widget usa el mismo almacenamiento de favoritos que Wave y confirma el estado solicitado en lugar de invertirlo varias veces si se repite una acción. Una representación vieja no puede marcar por error una canción nueva. En las canciones vinculadas a un servidor, guardar Me gusta requiere que el servidor confirme la operación. Los controles se ejecutan mediante App Intents.
+
+Los controles multimedia del sistema (el reproductor de iOS, fuera del widget Wave) los presenta Apple. Wave registra los comandos anterior y Me gusta, pero iOS decide qué botones muestra en cada superficie.
+
+Esta entrega es un **candidato de fuentes** pendiente de compilación y revisión visual en Xcode. Aquí se comprueban proyecto, sintaxis y bloqueo de publicación. Se incluyen XCTest de favoritos idempotentes y salto entre carpetas para ejecutar en Mac.
+
+Antes de publicar una versión verificada:
 
 ```sh
 python3 scripts/validate-xcode.py
 python3 scripts/package-release.py --output releases/verified
 ```
 
-En dispositivo comprueba especialmente:
+Comprueba en dispositivo el tamaño de la portada, la posición inferior de los controles, la alineación de las filas, las miniaturas, el cambio Local/Servidor y el nuevo corazón en widgets pequeños y rectangulares.
 
-1. Entrar en una playlist/carpeta, bajar por la lista y confirmar que desaparece toda la barra superior, no sólo el campo de búsqueda; subir para recuperar Atrás. Repetir en vertical y horizontal, al actualizar y al cambiar de pestaña.
-2. Abrir En reposo y verificar que la biblioteca ocupa el ancho y que la música continúa al explorar o pasar páginas. Confirmar que el reproductor inferior se adapta a la anchura disponible.
-3. Esperar 20 segundos sin tocar: verificar la atenuación; tocar para iluminar y después usar un control. Arrastrar lista o barra durante más de 20 segundos no debe atenuar mientras se interactúa.
-4. Probar Anterior en el widget pequeño y recorrer el nuevo Explorador de carpetas en ambos tamaños; confirmar la misma carpeta y canción en los widgets conectados.
 
-Referencias: [tamaños extra grandes de WidgetKit](https://developer.apple.com/documentation/widgetkit/widgetfamily/systemextralarge), [WidgetKit](https://developer.apple.com/documentation/widgetkit).
+## Pantalla completa real y controles en una fila · 0.11.2
+
+Esta variante continúa sobre 0.11 y no incluye funciones de 0.12. Cambia únicamente la presentación En reposo de Wave:
+
+- Se presenta con `fullScreenCover` fuera de la superposición de la biblioteca y su `GeometryReader` mide el área completa de la ventana.
+- El fondo y las filas de biblioteca se extienden hasta los laterales, con sólo 6 puntos de margen exterior. El texto de las filas y los controles respetan la zona de cámara y el indicador inferior.
+- Se mantiene la biblioteca como panel principal, con las mismas filas y páginas de 24 elementos. El espacio recuperado se reparte entre biblioteca y reproductor.
+- Se elimina el `ScrollView` independiente del reproductor. Portada y metadatos se compactan en una fila; anterior, reproducir/pausar, siguiente y Me gusta comparten otra fila.
+
+Compilación y revisión visual pendientes de Xcode. Esta descarga es un candidato de fuentes; el empaquetador sigue exigiendo compilación y XCTest para una versión verificada.
+
+
+## Ajuste exclusivo de ancho · 0.11.1
+
+Esta variante parte de las fuentes exactas de 0.11.0, sin incluir cambios de 0.12. Sólo modifica la distribución horizontal de En reposo de Wave:
+
+- Márgenes laterales de 16 a 6 puntos.
+- Separación entre paneles de 16 a 8 puntos.
+- Los 36 puntos recuperados se asignan al reproductor, conservando el ancho anterior de la biblioteca.
+- Lista, filas, scroll, páginas de 24 elementos y distribución vertical permanecen como en 0.11.
+
+Fuentes pendientes de compilación y comprobación visual con Xcode. El empaquetado verificado sigue bloqueado sin la validación real.
 
 
 ## Espacio horizontal, navegación y biblioteca En reposo · 0.11.0

@@ -146,6 +146,9 @@ final class LibraryPreferences: ObservableObject {
     func saveLike(_ song: PlaybackSong) async -> Bool {
         await writeLike(song, desired: true)
     }
+    func setLike(_ song: PlaybackSong, liked: Bool) async -> Bool {
+        await writeLike(song, desired: liked)
+    }
     private func writeLike(_ song: PlaybackSong, desired: Bool?) async -> Bool {
         guard ready, !pendingLikes.contains(song.id) else { return false }
         pendingLikes.insert(song.id)

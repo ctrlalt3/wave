@@ -105,8 +105,6 @@ private struct WavePageNavigation: ViewModifier {
     let title: String
     let search: Binding<String>?
     let prompt: String
-    @State private var chromeHidden = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ViewBuilder func body(content: Content) -> some View {
         if let search {
             navigation(content)
@@ -115,13 +113,7 @@ private struct WavePageNavigation: ViewModifier {
         } else { navigation(content) }
     }
     private func navigation(_ content: Content) -> some View {
-        content.navigationTitle(Text(title)).navigationBarTitleDisplayMode(.inline)
-            .background(WaveScrollChromeObserver { hidden in
-                guard chromeHidden != hidden else { return }
-                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) { chromeHidden = hidden }
-            })
-            .toolbar(chromeHidden ? .hidden : .visible, for: .navigationBar)
-            .onAppear { chromeHidden = false }
+        content.navigationTitle("").navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(WaveTheme.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
     }
@@ -131,7 +123,7 @@ private struct WaveLibraryStyle: ViewModifier {
     @Environment(\.waveLayout) private var layout
     func body(content: Content) -> some View {
         content.frame(maxWidth: .infinity, maxHeight: .infinity).listStyle(.plain).listSectionSpacing(layout.compactHeader ? 8 : 20).scrollContentBackground(.hidden)
-            .contentMargins(.horizontal, layout.usesSidebar ? 4 : 12, for: .scrollContent)
+            .contentMargins(.horizontal, layout.compactHeader ? 12 : 16, for: .scrollContent)
             .contentMargins(.top, layout.compactHeader ? 0 : 8, for: .scrollContent)
             .contentMargins(.bottom, layout.compactHeader ? 12 : 32, for: .scrollContent).background(WaveTheme.background)
     }
