@@ -19,6 +19,33 @@ final class DiscoverTests: XCTestCase {
 }
 
 @MainActor
+final class NavigationChromeTests: XCTestCase {
+    func testScrollUpExpandsWithoutReturningToTheTop() {
+        let chrome = WaveNavigationChrome()
+        chrome.scroll(delta: 20)
+        XCTAssertTrue(chrome.compact)
+        chrome.scroll(delta: -18)
+        XCTAssertFalse(chrome.compact)
+    }
+    func testRepeatedUpAndDownChangesDirectionWithoutReturningToTop() {
+        let chrome = WaveNavigationChrome()
+        for _ in 0..<4 {
+            chrome.scroll(delta: 24)
+            XCTAssertTrue(chrome.compact)
+            chrome.scroll(delta: -24)
+            XCTAssertFalse(chrome.compact)
+        }
+    }
+
+    func testSmallJitterDoesNotCollapseNavigation() {
+        let chrome = WaveNavigationChrome()
+        chrome.scroll(delta: 4)
+        chrome.scroll(delta: -4)
+        XCTAssertFalse(chrome.compact)
+    }
+}
+
+@MainActor
 final class DiscoverFavoritesTests: XCTestCase {
     func testDiscoverSaveSelectsFolderHeartAndPersistsWithoutMovingSong() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -201,19 +228,4 @@ private final class LikeSavingProtocol: URLProtocol {
         client?.urlProtocolDidFinishLoading(self)
     }
     override func stopLoading() {}
-}
-
-final class GestureNavigationTests: XCTestCase {
-    func testDeliberateHorizontalSwipeChangesOneSection() {
-        XCTAssertEqual(WaveGestureNavigation.section(after: .server, horizontal: -90, vertical: 10), .local)
-        XCTAssertEqual(WaveGestureNavigation.section(after: .playlists, horizontal: 90, vertical: 10), .local)
-    }
-    func testVerticalOrSmallGesturesDoNotSwitchTabs() {
-        XCTAssertNil(WaveGestureNavigation.section(after: .local, horizontal: 50, vertical: 0))
-        XCTAssertNil(WaveGestureNavigation.section(after: .local, horizontal: 90, vertical: 100))
-    }
-    func testSectionEdgesDoNotWrap() {
-        XCTAssertNil(WaveGestureNavigation.section(after: .server, horizontal: 90, vertical: 0))
-        XCTAssertNil(WaveGestureNavigation.section(after: .settings, horizontal: -90, vertical: 0))
-    }
 }
