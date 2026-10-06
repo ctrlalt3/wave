@@ -23,12 +23,6 @@ Este repo unifica las tres plataformas (iOS, macOS, Web). `main` siempre contien
 
 Cada versión histórica de la app iOS se conserva como rama independiente (snapshot completo de `ios/` en esa versión), en vez de carpetas o zips sueltos. `main` siempre tiene la versión actual (0.12.0).
 
-Ramas disponibles, en orden:
-
-`ios-v0.3.0` · `ios-v0.4.0` · `ios-v0.4.0-navegacion-corregida` · `ios-v0.5.0` · `ios-v0.6.0` · `ios-v0.6.0-playlists` · `ios-v0.6.1` · `ios-v0.6.2` · `ios-v0.6.3` · `ios-v0.6.4` · `ios-v0.6.5` · `ios-v0.6.6` · `ios-v0.7.0` · `ios-v0.7.1` · `ios-v0.7.2` · `ios-v0.7.3` · `ios-v0.7.4` · `ios-v0.7.5` · `ios-v0.7.6` · `ios-v0.7.7` · `ios-v0.8.0` · `ios-v0.9.0` · `ios-v0.9.1` · `ios-v0.10.0` · `ios-v0.11.0` · `ios-v0.11.1` · `ios-v0.11.2` · `ios-v0.11.3` · `ios-v0.11.4` · `ios-v0.11.5` · `ios-v0.11.6` · `ios-v0.11.7`
-
-Las dos ramas con sufijo (`-navegacion-corregida`, `-playlists`) son snapshots alternativos que comparten el mismo número de versión que su release vecino pero corresponden a un zip de fuente distinto en `ios/releases/`.
-
 ## Instalación — Backend / Web
 
 ```bash
