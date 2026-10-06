@@ -100,8 +100,8 @@ struct DeviceMusicLibraryView: View {
                 }
             }
         }.waveLibraryStyle()
-            
-            .wavePage(title: "Música del dispositivo")
+            .navigationTitle("").navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: "Música del dispositivo") }
             .task { library.reload() }.refreshable { library.reload() }
             .onChange(of: scenePhase) { _, value in if value == .active { library.reload() } }
     }
@@ -163,6 +163,6 @@ struct DeviceSongsView: View {
                 }
             }
         }.waveLibraryStyle()
-            .wavePage(title: title, search: $search, prompt: "Canción, artista o álbum")
+            .navigationTitle("").navigationBarTitleDisplayMode(.inline).safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: title, search: $search, prompt: "Canción, artista o álbum") }
     }
 }
