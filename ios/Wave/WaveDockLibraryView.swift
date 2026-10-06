@@ -2,7 +2,6 @@ import SwiftUI
 import WidgetKit
 
 struct WaveDockLibraryView: View {
-    var onClose: (() -> Void)? = nil
     @EnvironmentObject private var player: WavePlayer
     @State private var page = WaveWidgetBrowserPage.empty
     @State private var busy = false
@@ -10,9 +9,9 @@ struct WaveDockLibraryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) { backButton; folderTitle; sourcePicker.frame(width: 144); refreshButton; closeButton }
+                HStack(spacing: 8) { backButton; folderTitle; sourcePicker.frame(width: 160); refreshButton }
                 VStack(spacing: 4) {
-                    HStack { sourcePicker; refreshButton; closeButton }
+                    HStack { sourcePicker; refreshButton }
                     HStack { backButton; folderTitle }
                 }
             }
@@ -28,7 +27,7 @@ struct WaveDockLibraryView: View {
                                     Text(item.subtitle).font(.subheadline).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
                                 }.frame(maxWidth: .infinity, alignment: .leading)
                                 if item.kind == .folder { Image(systemName: "chevron.right").font(.caption) }
-                            }.padding(.horizontal, 8).padding(.vertical, 8).frame(minHeight: 56)
+                            }.padding(.horizontal, 14).padding(.vertical, 10).frame(minHeight: 56)
                                 .background(item.playbackID != nil && item.playbackID == player.current?.id ? Color.white.opacity(0.15) : Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
                         }.buttonStyle(.plain).disabled(busy).accessibilityLabel((item.kind == .folder ? "Abrir carpeta " : "Reproducir ") + item.title)
                     }
@@ -51,9 +50,6 @@ struct WaveDockLibraryView: View {
                 do { try await Task.sleep(for: .seconds(3)) } catch { return }
             }
         }
-    }
-    @ViewBuilder private var closeButton: some View {
-        if let onClose { Button(action: onClose) { Image(systemName: "xmark").frame(width: 44, height: 44) }.accessibilityLabel("Cerrar En reposo") }
     }
     private var sourcePicker: some View {
         Picker("Biblioteca", selection: Binding(get: { page.state.source }, set: { source in

@@ -513,7 +513,6 @@ struct LocalTracksView: View {
 }
 
 struct WaveSettingsView: View {
-    @AppStorage("wave.dock.dimWhenIdle") private var dimWhenIdle = true
     @AppStorage("wave.dock.automatic") private var automaticDock = true
     @AppStorage("wave.appearance") private var appearance = WaveAppearance.system.rawValue
     @AppStorage("wave.accent") private var accent = WaveAccent.system.rawValue
@@ -539,8 +538,6 @@ struct WaveSettingsView: View {
             }.listRowBackground(WaveTheme.surface)
             Section("Horizontal y En reposo") {
                 Toggle("En reposo al cargar en horizontal", isOn: $automaticDock)
-                Toggle("Atenuar tras 20 segundos sin tocar", isOn: $dimWhenIdle)
-                Text("Toca la pantalla para iluminarla. La atenuación sólo afecta a la vista de Wave.").font(.caption).foregroundStyle(WaveTheme.secondary)
                 Text("El menú aparece a la izquierda al girar el dispositivo. La vista En reposo de Wave muestra reloj y música mientras la app está abierta.").font(.caption).foregroundStyle(WaveTheme.secondary)
                 if !WaveWidgetStore.available { Text("Los widgets no están conectados. Revisa las instrucciones de instalación de esta versión.").font(.caption).foregroundStyle(WaveTheme.secondary) }
                 Text("Los widgets Elegir canción y Reproduciendo permiten seleccionar música y controlarla desde Inicio o En reposo de iOS. El widget grande Biblioteca y reproductor reúne ambos.").font(.caption).foregroundStyle(WaveTheme.secondary)
@@ -549,7 +546,7 @@ struct WaveSettingsView: View {
                 Text("En Mi iPhone o Mi iPad puedes abrir tu biblioteca de Música o importar archivos desde Archivos.")
                 Text("Los originales permanecen en su ubicación. Las copias importadas ocupan espacio en este dispositivo.")
             }.font(.subheadline).foregroundStyle(WaveTheme.secondary).listRowBackground(WaveTheme.surface)
-            Section("Wave para iOS · 0.12.0") {
+            Section("Wave para iOS · 0.11.0") {
                 Text("Servidor, archivos locales y biblioteca de Música del dispositivo.")
                 Text("Versión instalada: \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—") · build \(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—")").font(.caption.monospacedDigit())
             }.font(.caption).listRowBackground(WaveTheme.surface)

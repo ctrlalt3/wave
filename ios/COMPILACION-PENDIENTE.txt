@@ -1,0 +1,1 @@
+Candidato de fuentes: no se ha compilado con Xcode. Ejecuta python3 scripts/validate-xcode.py en un Mac antes de usarlo como versión verificada.

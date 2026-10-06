@@ -1,40 +1,4 @@
-# Wave para iPhone e iPad · 0.12.0 (build 27)
-
-## Scroll a pantalla completa, explorador grande y atenuación · 0.12.0
-
-- **Título y buscador se ocultan juntos** al bajar por una lista. Se observa el gesto de su `UIScrollView` nativo sin reemplazar su delegado ni añadir otro gesto de scroll. Al subir o volver al inicio reaparece la barra, incluidos Atrás y las acciones de la carpeta. Las variaciones pequeñas de dirección usan umbrales para evitar parpadeos.
-- Menú lateral de 60 puntos en formato compacto y 192 en ancho, con margen de 8 puntos; listas con menos margen horizontal. Se mantiene el fondo hasta los bordes y la protección de las áreas de cámara del dispositivo.
-- **En reposo de Wave usa toda la anchura para la biblioteca**: se retira la columna permanente del reproductor y se coloca una franja de controles abajo. La cabecera de la biblioteca integra el cierre, evitando otra fila superior. Se conservan Local/Servidor, carpetas y páginas de 24 elementos.
-- **Atenuación por inactividad**: la vista de Wave se oscurece después de 20 segundos sin tocar; al tocar o mover el dedo se ilumina de nuevo. El primer toque en la pantalla atenuada sirve para despertarla. La música y la selección continúan. La actividad se observa sin cancelar toques ni impedir scroll/slider. Se puede desactivar en Ajustes → Horizontal y En reposo. Se respeta el estado de la app, Reducir movimiento y VoiceOver.
-- **Anterior en el reproductor pequeño**, incluyendo el mismo widget pequeño usado en En reposo de iOS: anterior, reproducir/pausar y siguiente, con áreas de 44 puntos.
-- Nuevo **Wave · Explorador de carpetas**, adicional a los widgets existentes. Utiliza formatos grande y extra grande, sin márgenes del sistema añadidos: Local/Servidor, inicio, carpeta superior, actualización, ruta completa y reproducción directa. Ajusta filas al alto disponible y usa dos columnas en formatos anchos. La navegación es por páginas y botones; comparte estado con el selector, el reproductor y la biblioteca de Wave.
-
-### Límites del sistema y uso
-
-El formato **grande** puede añadirse en Inicio del iPhone; el **extra grande** está disponible en iPad. Añade Explorador de carpetas desde la galería de widgets de Wave. Los widgets no tienen scroll libre ni pueden ocupar arbitrariamente todo el display. En reposo de iOS sigue usando los widgets pequeños; para navegar en toda la pantalla usa la vista En reposo dentro de Wave.
-
-La atenuación de esta entrega sólo afecta al contenido de Wave; no cambia `UIScreen.brightness`, no fuerza una pantalla Always-On por hardware y no desactiva el bloqueo automático de iOS. El brillo y el modo En reposo del sistema los controla iOS.
-
-### Validación e instalación
-
-Esta es una descarga de **fuentes pendientes de compilación con Xcode**. Se han ejecutado los controles del proyecto y del bloqueo de publicación y analizado la sintaxis Swift. Los XCTest incluidos cubren umbrales de scroll, inversión de dirección, posición inicial, geometría inválida, contador de inactividad, capacidad del widget y acción Inicio; necesitan ejecución en un Mac.
-
-Instala desde `Wave.xcodeproj`, conservando el mismo Team y App Group en Wave y WaveWidgets. Antes de publicar una versión verificada:
-
-```sh
-python3 scripts/validate-xcode.py
-python3 scripts/package-release.py --output releases/verified
-```
-
-En dispositivo comprueba especialmente:
-
-1. Entrar en una playlist/carpeta, bajar por la lista y confirmar que desaparece toda la barra superior, no sólo el campo de búsqueda; subir para recuperar Atrás. Repetir en vertical y horizontal, al actualizar y al cambiar de pestaña.
-2. Abrir En reposo y verificar que la biblioteca ocupa el ancho y que la música continúa al explorar o pasar páginas. Confirmar que el reproductor inferior se adapta a la anchura disponible.
-3. Esperar 20 segundos sin tocar: verificar la atenuación; tocar para iluminar y después usar un control. Arrastrar lista o barra durante más de 20 segundos no debe atenuar mientras se interactúa.
-4. Probar Anterior en el widget pequeño y recorrer el nuevo Explorador de carpetas en ambos tamaños; confirmar la misma carpeta y canción en los widgets conectados.
-
-Referencias: [tamaños extra grandes de WidgetKit](https://developer.apple.com/documentation/widgetkit/widgetfamily/systemextralarge), [WidgetKit](https://developer.apple.com/documentation/widgetkit).
-
+# Wave para iPhone e iPad · 0.11.0 (build 26)
 
 ## Espacio horizontal, navegación y biblioteca En reposo · 0.11.0
 
