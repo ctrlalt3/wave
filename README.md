@@ -1,45 +1,41 @@
-# 🎵 SOUNDDROP — Music Downloader
+# 🎵 Wave
 
-Web app para descargar música de SoundCloud usando `scdl`.
+Reproductor y gestor de música personal con backend propio, apps nativas de iOS/macOS y cliente web. Incluye descarga desde SoundCloud (`scdl`) y sincronización en la nube entre dispositivos.
 
-## Estructura
+## Estructura del repo
 
 ```
-music-downloader/
-├── app.py              ← Backend Flask
+wave/
+├── app.py              ← Backend Flask (API, descargas, nube)
+├── cloud_api.py         ← Endpoints de sincronización en la nube
+├── desktop_api.py        ← Endpoints usados por la app de macOS
 ├── requirements.txt
-├── static/
-│   └── index.html      ← Frontend
-└── downloads/          ← Se crea automáticamente
+├── static/               ← Frontend web (reproductor, descargador)
+├── ios/                  ← App nativa iOS/iPadOS (SwiftUI) — versión actual: 0.12.0
+├── desktop/              ← App nativa macOS (Electron) — versión actual: 1.5
+├── tests/
+└── downloads/            ← Se crea automáticamente (ignorado por git)
 ```
 
-## Instalación
+Este repo unifica las tres plataformas (iOS, macOS, Web). `main` siempre contiene la versión actual de cada una.
+
+## Versionado de iOS
+
+Las versiones anteriores de la app iOS (0.11.1 a 0.11.7) se conservan como ramas independientes en vez de carpetas sueltas:
+
+- `ios-v0.11.1` … `ios-v0.11.7` — snapshot completo de `ios/` en esa versión
+- `main` — versión actual (0.12.0)
+
+## Instalación — Backend / Web
 
 ```bash
-# 1. Instalar dependencias
 pip install -r requirements.txt
-
-# 2. Iniciar el servidor
 python app.py
 ```
 
 Abre tu navegador en: **http://localhost:5000**
 
-## Uso
-
-1. Pega una URL de SoundCloud (canción o playlist)
-2. Pulsa **DESCARGAR**
-3. Espera a que termine y descarga el archivo(s)
-
-## Ejemplos de URLs compatibles
-
-- Canción: `https://soundcloud.com/artista/nombre-cancion`
-- Playlist: `https://soundcloud.com/artista/sets/nombre-playlist`
-- Usuario (todas sus canciones): `https://soundcloud.com/artista`
-
-## Producción (opcional)
-
-Para servir con gunicorn:
+### Producción (opcional)
 
 ```bash
 pip install gunicorn
@@ -48,5 +44,24 @@ gunicorn -w 4 -b 0.0.0.0:5000 app:app
 
 O con nginx como proxy inverso apuntando al puerto 5000.
 
-> **Nota**: Los archivos descargados se guardan en la carpeta `downloads/` del servidor.
-> Puedes añadir limpieza periódica con un cron job si el espacio es limitado.
+## App de macOS
+
+Ver [`desktop/README.md`](desktop/README.md). Build con Electron (`desktop/package.json`).
+
+## App de iOS
+
+Ver [`ios/README.md`](ios/README.md). Proyecto Xcode generado con XcodeGen (`ios/project.yml`).
+
+## Descarga desde SoundCloud
+
+1. Pega una URL de SoundCloud (canción o playlist) en el frontend web
+2. Pulsa **DESCARGAR**
+3. Espera a que termine y descarga el archivo(s)
+
+Ejemplos de URLs compatibles:
+
+- Canción: `https://soundcloud.com/artista/nombre-cancion`
+- Playlist: `https://soundcloud.com/artista/sets/nombre-playlist`
+- Usuario (todas sus canciones): `https://soundcloud.com/artista`
+
+> **Nota**: los archivos descargados se guardan en `downloads/` en el servidor y no se versionan en git.
