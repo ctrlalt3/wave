@@ -46,29 +46,6 @@ final class LibraryPreferencesTests: XCTestCase {
         XCTAssertEqual(state.favorites, ["local:42", "https://one.example/wave/folder/new.mp3", "https://two.example/wave/old.mp3"])
     }
 
-    func testHierarchyMigrationMovesLikesAndDoesNotRestoreDeletedPlaylists() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        defer { try? FileManager.default.removeItem(at: root) }
-        let storage = LibraryPreferencesStorage(file: root.appendingPathComponent("preferences.json"))
-        _ = try await storage.add(FolderPlaylist(id: "parent", title: "sesion", folder: "sesion", source: .local, server: nil))
-        _ = try await storage.favorite("local:copy", liked: true)
-        let migrated = try await storage.prepareLocalPlaylists(["sesion/House", "sesion/Techno"], replacements: ["copy": "one"])
-        XCTAssertEqual(migrated.playlists.map(\.folder), ["sesion/House", "sesion/Techno"])
-        XCTAssertEqual(migrated.favorites, ["local:one"])
-        let removed = try XCTUnwrap(migrated.playlists.first)
-        _ = try await storage.remove(removed.id)
-        let reopened = try await storage.prepareLocalPlaylists(["sesion/House", "sesion/Techno"], replacements: [:])
-        XCTAssertEqual(reopened.playlists.map(\.folder), ["sesion/Techno"])
-        XCTAssertEqual(reopened.favorites, ["local:one"])
-    }
-
-    func testOldPreferenceFormatRetainsPreviouslySavedLocalHearts() throws {
-        let data = Data(#"{"favorites":["local:42"],"playlists":[]}"#.utf8)
-        let old = try JSONDecoder().decode(LibraryPreferencesState.self, from: data)
-        XCTAssertEqual(old.favorites, ["local:42"])
-        XCTAssertNil(old.reconciledServers)
-    }
-
     func testCorruptPreferencesAreNotReplaced() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)

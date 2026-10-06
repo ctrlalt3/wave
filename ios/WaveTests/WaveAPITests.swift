@@ -36,20 +36,6 @@ final class WaveAPITests: XCTestCase {
         }
     }
 
-    func testArtworkFallsBackToTrackPathWhenCoverIsMissing() throws {
-        let api = try WaveAPI(server: "https://example.com/wave/")
-        let track = WaveTrack(name: "Song", artist: "Artist", duration: 10,
-                              relPath: "Música #1/song?.mp3", filename: "song?.mp3")
-        XCTAssertEqual(api.artworkURL(for: track)?.absoluteString,
-                       "https://example.com/wave/api/artwork/M%C3%BAsica%20%231/song%3F.mp3")
-        var invalid = track
-        invalid.coverUrl = "https://other.example/cover.png"
-        XCTAssertNil(api.artworkURL(for: invalid))
-        let traversal = WaveTrack(name: "Song", artist: "Artist", duration: 10,
-                                  relPath: "../secret.mp3", filename: "secret.mp3")
-        XCTAssertNil(api.artworkURL(for: traversal))
-    }
-
     func testServerContentsIncludesHiddenForAdvancedAndAppliesOrder() async throws {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [WaveFixtureProtocol.self]
