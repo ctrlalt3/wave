@@ -6,14 +6,11 @@ import Foundation
 struct LocalSong: Codable, Identifiable {
     let id: String
     let file: String
-    var folder: String
+    let folder: String
     let name: String
     let artist: String
     let duration: Double
     var originalFilename: String? = nil
-    var cloudPath: String? = nil
-    var cloudServer: String? = nil
-    var cloudHash: String? = nil
     var hidden = false
 
     // Include intermediate folders that only contain nested albums.
@@ -93,7 +90,7 @@ actor LocalLibraryStorage {
         try JSONEncoder().encode(songs).write(to: root.appendingPathComponent("library.json"), options: .atomic)
     }
 
-    func fingerprint(_ url: URL) throws -> String {
+    private func fingerprint(_ url: URL) throws -> String {
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
         var hash = SHA256()
@@ -279,14 +276,10 @@ final class LocalLibrary: ObservableObject {
     }
 
     func playable(_ song: LocalSong) -> PlaybackSong {
-        if let path = song.cloudPath, let base = song.cloudServer.flatMap({ URL(string: $0) }) {
-            let track = WaveTrack(name: song.name, artist: song.artist, duration: song.duration, relPath: path, filename: song.originalFilename ?? song.file)
-            return PlaybackSong(track: track, url: root.appendingPathComponent(song.file), source: "local", identity: base.absoluteString + path, serverBase: base)
-        }
-        return PlaybackSong(track: song.track, url: root.appendingPathComponent(song.file), source: "local", identity: "local:" + song.id)
+        PlaybackSong(track: song.track, url: root.appendingPathComponent(song.file), source: "local", identity: "local:" + song.id)
     }
 
-    func liked(_ song: LocalSong, in preferences: LibraryPreferences) -> Bool { preferences.liked(playable(song).id) }
+    func liked(_ song: LocalSong, in preferences: LibraryPreferences) -> Bool { preferences.liked("local:" + song.id) }
 
     // Single source of truth for "which songs live under this folder": Descubre, las
     // playlists y el filtro de favoritos deben coincidir siempre en este cálculo.
@@ -309,101 +302,5 @@ final class LocalLibrary: ObservableObject {
         let updated = songs.map { song in wanted.contains(song.id) ? (iterator.next() ?? song) : song }
         do { try await storage.save(updated); songs = updated }
         catch { notice = error.localizedDescription }
-    }
-}
-
-extension LocalLibraryStorage {
-    struct DownloadUndo: Codable { let expires: Date; let before: [LocalSong]; let afterHash: String }
-    func cloudDownload(_ api: WaveAPI, folder: String? = nil) async throws -> [LocalSong] {
-        let manifest: CloudManifest = try await api.get(["api", "cloud", "manifest"])
-        let before = try read()
-        func inScope(_ path: String) -> Bool { folder.map { path.hasPrefix($0 + "/") } ?? true }
-        var updated = before.filter { $0.cloudServer != api.base.absoluteString || !inScope($0.cloudPath ?? "") }
-        let previous = Dictionary(before.filter { $0.cloudServer == api.base.absoluteString }.compactMap { song in song.cloudPath.map { ($0, song) } }, uniquingKeysWith: { first, _ in first })
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        for track in manifest.tracks where inScope(track.path) {
-            try Task.checkCancellation()
-            if let song = previous[track.path], song.cloudHash == track.hash,
-               FileManager.default.fileExists(atPath: root.appendingPathComponent(song.file).path) { updated.append(song); continue }
-            let downloaded = try await api.cloudDownload(track)
-            guard try fingerprint(downloaded) == track.hash else { throw WaveAPI.Failure(message: "La descarga no supera la verificación.") }
-            let id = UUID().uuidString
-            let ext = (track.path as NSString).pathExtension
-            let file = id + "." + ext
-            let destination = root.appendingPathComponent(file)
-            try FileManager.default.moveItem(at: downloaded, to: destination)
-            let asset = AVURLAsset(url: destination)
-            let seconds = (try? await asset.load(.duration).seconds) ?? 0
-            let folder = (track.path as NSString).deletingLastPathComponent
-            let name = (track.path as NSString).lastPathComponent
-            updated.append(LocalSong(id: id, file: file, folder: folder, name: (name as NSString).deletingPathExtension, artist: folder, duration: seconds.isFinite ? seconds : 0, originalFilename: name, cloudPath: track.path, cloudServer: api.base.absoluteString, cloudHash: track.hash, hidden: previous[track.path]?.hidden ?? false))
-        }
-        let after = try JSONEncoder().encode(updated)
-        let undo = DownloadUndo(expires: Date().addingTimeInterval(1800), before: before, afterHash: SHA256.hash(data: after).map { String(format: "%02x", $0) }.joined())
-        try JSONEncoder().encode(undo).write(to: root.appendingPathComponent("cloud-download-undo.json"), options: .atomic)
-        try after.write(to: root.appendingPathComponent("library.json"), options: .atomic)
-        return updated
-    }
-    func undoCloudDownload() throws -> [LocalSong] {
-        let file = root.appendingPathComponent("cloud-download-undo.json")
-        let undo = try JSONDecoder().decode(DownloadUndo.self, from: Data(contentsOf: file))
-        guard Date() <= undo.expires else { throw WaveAPI.Failure(message: "El plazo de 30 minutos ha terminado.") }
-        let data = try Data(contentsOf: root.appendingPathComponent("library.json"))
-        let hash = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-        guard hash == undo.afterHash else { throw WaveAPI.Failure(message: "Hay cambios locales posteriores; no se pueden sobrescribir al deshacer.") }
-        try save(undo.before); try FileManager.default.removeItem(at: file)
-        return undo.before
-    }
-}
-extension LocalLibrary {
-    func publishCloud(_ api: WaveAPI, preferences: LibraryPreferences) async throws {
-        guard !saving && !importing else { throw WaveAPI.Failure(message: "Ya se está actualizando la biblioteca.") }
-        saving = true; defer { saving = false }
-        struct Session: Decodable { let id: String }
-        let session: Session = try await api.cloudRequest(["api", "cloud", "upload"])
-        let manifest: CloudManifest = try await api.get(["api", "cloud", "manifest"])
-        let remote = Dictionary(manifest.tracks.map { ($0.path, $0.hash) }, uniquingKeysWith: { first, _ in first })
-        var changed = 0
-        var updated = songs
-        for index in updated.indices {
-            let song = updated[index]
-            let path = song.cloudPath ?? song.folder + "/" + (song.originalFilename ?? song.file)
-            let hash = try await storage.fingerprint(root.appendingPathComponent(song.file))
-            if remote[path] != hash {
-                try await api.cloudUpload(path: path, file: root.appendingPathComponent(song.file), operation: session.id)
-                changed += 1
-            }
-            updated[index].cloudPath = path
-            updated[index].cloudServer = api.base.absoluteString
-            updated[index].cloudHash = hash
-        }
-        if changed > 0 { let _: CloudOperation = try await api.cloudRequest(["api", "cloud", "upload", session.id, "commit"]) }
-        for song in updated where preferences.liked("local:" + song.id) {
-            if let path = song.cloudPath { try await api.setLike(path, liked: true) }
-        }
-        try await storage.save(updated); songs = updated
-        await preferences.linkCloudFavorites(updated)
-        await preferences.synchronizeServer(api)
-        notice = "Carpetas guardadas en el servidor y la nube. Puedes deshacer durante 30 minutos."
-    }
-    func downloadCloud(_ api: WaveAPI, folder: String? = nil) async throws {
-        guard !saving && !importing else { throw WaveAPI.Failure(message: "Ya se está actualizando la biblioteca.") }
-        saving = true; defer { saving = false }; songs = try await storage.cloudDownload(api, folder: folder)
-    }
-    func undoCloudDownload() async throws {
-        guard !saving && !importing else { throw WaveAPI.Failure(message: "Ya se está actualizando la biblioteca.") }
-        saving = true; defer { saving = false }; songs = try await storage.undoCloudDownload()
-    }
-}
-
-extension LocalLibrary {
-    func relocate(_ song: PlaybackSong, folder: String, cloudPath: String? = nil) async throws {
-        guard !saving && !importing, WaveAPI.safePath(folder),
-              let index = songs.firstIndex(where: { playable($0).id == song.id }) else { throw WaveAPI.Failure(message: "Canción local no disponible.") }
-        saving = true; defer { saving = false }
-        var updated = songs
-        updated[index].folder = folder
-        if let cloudPath { updated[index].cloudPath = cloudPath }
-        try await storage.save(updated); songs = updated
     }
 }

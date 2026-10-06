@@ -104,8 +104,8 @@ struct SpotifyView: View {
                     Button("Siguiente") { Task { await search(at: offset + 10) } }.disabled(loading || page.next == nil || offset >= 1000)
                 }.listRowBackground(Color.clear)
             }
-        }.waveLibraryStyle()
-            .wavePage(title: "Spotify", search: $query, prompt: "Canción, artista o álbum").onSubmit(of: .search) { startSearch() }
+        }.waveLibraryStyle().navigationTitle("").navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: "Spotify", search: $query, prompt: "Canción, artista o álbum").onSubmit { startSearch() } }
     }
     private func startSearch() {
         guard !loading else { return }
