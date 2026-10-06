@@ -141,7 +141,7 @@ enum WaveWidgetBrowserStorage {
     struct Failure: LocalizedError { let message: String; var errorDescription: String? { message } }
 }
 
-enum WaveWidgetBrowseCommand: String { case local, server, toggleSource, home, up, previousPage, nextPage, folder, refresh }
+enum WaveWidgetBrowseCommand: String { case local, server, toggleSource, up, previousPage, nextPage, folder, refresh }
 actor WaveWidgetBrowserService {
     static let shared = WaveWidgetBrowserService()
     private let storageRoot: URL?
@@ -232,7 +232,6 @@ actor WaveWidgetBrowserService {
                 case .local: state.source = .local; state.folder = ""; state.offset = 0
                 case .server: state.source = .server; state.folder = ""; state.offset = 0
                 case .toggleSource: state.source = state.source == .local ? .server : .local; state.folder = ""; state.offset = 0
-                case .home: state.folder = ""; state.offset = 0
                 case .up: state.folder = state.folder.split(separator: "/").dropLast().joined(separator: "/"); state.offset = 0
                 case .previousPage: state.offset = max(0, state.offset - max(1, min(stride, 48)))
                 case .nextPage: state.offset = min(max(0, existing.total - 1), state.offset + max(1, min(stride, 48)))

@@ -8,7 +8,6 @@ struct WaveWidgetsBundle: WidgetBundle {
         WaveNowPlayingWidget()
         WaveLibraryWidget()
         WaveMusicConsoleWidget()
-        WaveFolderExplorerWidget()
     }
 }
 struct WaveWidgetEntry: TimelineEntry {
@@ -30,7 +29,7 @@ struct WaveWidgetProvider: TimelineProvider {
         let image = WaveWidgetStore.artworkURL(filename: state.artworkFilename).flatMap { UIImage(contentsOfFile: $0.path) }
         let browsing = WaveWidgetBrowserStorage.state()
         let serverID = browsing.source == .server ? WaveWidgetBrowserStorage.serverURL().map { WaveWidgetBrowserStorage.key($0.absoluteString) } ?? "" : ""
-        var browser = WaveWidgetBrowserStorage.page(state: browsing, serverID: serverID, rows: 24)
+        var browser = WaveWidgetBrowserStorage.page(state: browsing, serverID: serverID, rows: 6)
         if browser.total == 0 && browser.message == nil { browser.message = "Pulsa Actualizar para cargar la biblioteca." }
         return WaveWidgetEntry(date: .now, state: state, artwork: image, browser: browser)
     }
@@ -43,7 +42,6 @@ struct WaveNowPlayingWidget: Widget {
                 .containerBackground(for: .widget) { Color(.secondarySystemBackground) }
                 .widgetURL(WaveWidgetDestination.player.url)
         }
-        .contentMarginsDisabled()
         .containerBackgroundRemovable(true)
         .configurationDisplayName("Wave · Reproduciendo")
         .description("Tu canción y controles de música, también en la pantalla bloqueada y En reposo.")
@@ -87,15 +85,13 @@ struct WaveNowPlayingWidgetView: View {
                 Text(entry.state.title).font(showsBackground ? .subheadline.weight(.semibold) : .headline).lineLimit(2).minimumScaleFactor(0.85)
                 Spacer(minLength: 0)
                 if entry.state.songID != nil {
-                    HStack(spacing: 0) {
-                        playbackButton(.previous, symbol: "backward.end.fill", label: "Anterior")
-                        Spacer(minLength: 0)
+                    HStack {
                         playbackButton(.toggle, symbol: entry.state.isPlaying ? "pause.fill" : "play.fill", label: entry.state.isPlaying ? "Pausar" : "Reproducir")
-                        Spacer(minLength: 0)
+                        Spacer(minLength: 4)
                         playbackButton(.next, symbol: "forward.end.fill", label: "Siguiente")
                     }
                 } else { Label("Abrir Wave", systemImage: "arrow.up.right").font(.caption) }
-            }.padding(8)
+            }
         default:
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 14) {
@@ -129,7 +125,7 @@ struct WaveNowPlayingWidgetView: View {
                     if entry.state.queue.isEmpty { Text("Abre Wave para elegir tu próxima canción.").font(.caption).foregroundStyle(.secondary) }
                     Spacer(minLength: 0)
                 }
-            }.padding(12)
+            }
         }
     }
     private func artwork(size: CGFloat) -> some View {
@@ -170,21 +166,6 @@ struct WaveMusicConsoleWidget: Widget {
         .containerBackgroundRemovable(true)
         .configurationDisplayName("Wave · Biblioteca y reproductor")
         .description("Elige canciones y controla la reproducción desde un único widget grande.")
-        .supportedFamilies([.systemLarge, .systemExtraLarge])
-    }
-}
-
-struct WaveFolderExplorerWidget: Widget {
-    let kind = "WaveFolderExplorer"
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: WaveWidgetProvider()) { entry in
-            WaveFolderExplorerView(page: entry.browser, playback: entry.state)
-                .containerBackground(for: .widget) { Color(.secondarySystemBackground) }
-        }
-        .contentMarginsDisabled()
-        .containerBackgroundRemovable(true)
-        .configurationDisplayName("Wave · Explorador de carpetas")
-        .description("Bibliotecas Local y Servidor, ruta, carpeta superior, inicio y reproducción directa en el mayor espacio disponible.")
         .supportedFamilies([.systemLarge, .systemExtraLarge])
     }
 }
