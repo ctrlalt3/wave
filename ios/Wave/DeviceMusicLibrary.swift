@@ -100,19 +100,19 @@ struct DeviceMusicLibraryView: View {
                 }
             }
         }.waveLibraryStyle()
-            
-            .wavePage(title: "Música del dispositivo")
+            .navigationTitle("").navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: "Música del dispositivo") }
             .task { library.reload() }.refreshable { library.reload() }
             .onChange(of: scenePhase) { _, value in if value == .active { library.reload() } }
     }
     private func collections(_ title: String, _ values: [DeviceCollection]) -> some View {
-        Section {
+        Section(title) {
             ForEach(values) { collection in
                 NavigationLink { DeviceSongsView(title: collection.title, songs: collection.songs) } label: {
                     PlaylistRow(name: collection.title, count: collection.songs.count, artwork: collection.songs.first?.item.artwork)
                 }.listRowBackground(WaveTheme.surface)
             }
-        } header: { WaveSectionHeader(title: title) }
+        }
     }
 }
 
@@ -125,9 +125,8 @@ struct DeviceSongsView: View {
     @State private var search = ""
     @State private var downloadedOnly = true
     @State private var sort: TrackSort = .manual
-    @State private var likedOnly = false
     private var visible: [DeviceSong] {
-        let filtered = songs.filter { (!downloadedOnly || !$0.item.isCloudItem) && (!(favoritesOnly || likedOnly) || preferences.liked($0.playable.id)) && (search.isEmpty || ($0.name + " " + $0.artist + " " + $0.album).localizedCaseInsensitiveContains(search)) }
+        let filtered = songs.filter { (!downloadedOnly || !$0.item.isCloudItem) && (!favoritesOnly || preferences.liked($0.playable.id)) && (search.isEmpty || ($0.name + " " + $0.artist + " " + $0.album).localizedCaseInsensitiveContains(search)) }
         switch sort {
         case .manual: return filtered
         case .name: return filtered.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
@@ -137,13 +136,9 @@ struct DeviceSongsView: View {
         }
     }
     var body: some View {
-        let visible = self.visible
-        return List {
+        List {
             TrackSortMenu(sort: $sort).listRowBackground(Color.clear)
             Toggle("Solo en el dispositivo", isOn: $downloadedOnly).font(.subheadline).listRowBackground(Color.clear)
-            if !favoritesOnly {
-                Toggle("Solo favoritas", isOn: $likedOnly).listRowBackground(Color.clear)
-            }
             if let first = visible.first {
                 Button { player.play(first.playable, queue: visible.map(\.playable)) } label: { Label("Reproducir playlist", systemImage: "play.fill") }.listRowBackground(WaveTheme.selected)
             }
@@ -163,6 +158,6 @@ struct DeviceSongsView: View {
                 }
             }
         }.waveLibraryStyle()
-            .wavePage(title: title, search: $search, prompt: "Canción, artista o álbum")
+            .navigationTitle("").navigationBarTitleDisplayMode(.inline).safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: title, search: $search, prompt: "Canción, artista o álbum") }
     }
 }
