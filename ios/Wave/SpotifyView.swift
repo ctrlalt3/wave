@@ -76,6 +76,7 @@ struct SpotifyView: View {
         List {
             Text("Busca canciones en el catálogo y ábrelas en Spotify para escucharlas.").font(.subheadline).foregroundStyle(WaveTheme.secondary).listRowBackground(Color.clear)
             Section {
+                TextField("Canción, artista o álbum", text: $query).submitLabel(.search).onSubmit { startSearch() }
                 Picker("Mercado", selection: $market) {
                     Text("España").tag("ES"); Text("México").tag("MX"); Text("Argentina").tag("AR"); Text("Estados Unidos").tag("US"); Text("Reino Unido").tag("GB")
                 }
@@ -104,8 +105,8 @@ struct SpotifyView: View {
                     Button("Siguiente") { Task { await search(at: offset + 10) } }.disabled(loading || page.next == nil || offset >= 1000)
                 }.listRowBackground(Color.clear)
             }
-        }.waveLibraryStyle()
-            .wavePage(title: "Spotify", search: $query, prompt: "Canción, artista o álbum").onSubmit(of: .search) { startSearch() }
+        }.waveLibraryStyle().navigationTitle("").navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: "Spotify") }
     }
     private func startSearch() {
         guard !loading else { return }

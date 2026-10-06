@@ -2,6 +2,51 @@ import SwiftUI
 import Combine
 import UIKit
 
+@MainActor
+final class WaveNavigationChrome: ObservableObject {
+    @Published var compact = false
+    var trackingEnabled = true
+    private var travel: CGFloat = 0
+    func scroll(delta: CGFloat) {
+        guard trackingEnabled else { return }
+        if (delta > 0 && travel < 0) || (delta < 0 && travel > 0) { travel = 0 }
+        travel += delta
+        if travel > 16 { if !compact { compact = true }; travel = 0 }
+        else if travel < -16 { if compact { compact = false }; travel = 0 }
+    }
+    func expand() { compact = false; travel = 0 }
+}
+
+
+struct WaveScrollTracking: ViewModifier {
+    @EnvironmentObject private var chrome: WaveNavigationChrome
+    @State private var interacting = false
+    @State private var previousDrag: CGFloat = 0
+    @ViewBuilder func body(content: Content) -> some View {
+        #if compiler(>=6.0)
+        if #available(iOS 18.0, *) {
+            content.onScrollPhaseChange { _, phase in
+                interacting = phase == .interacting || phase == .decelerating
+            }.onScrollGeometryChange(for: CGFloat.self) { geometry in
+                let maximum = max(0, geometry.contentSize.height - geometry.containerSize.height + geometry.contentInsets.top + geometry.contentInsets.bottom)
+                return min(maximum, max(0, geometry.contentOffset.y + geometry.contentInsets.top))
+            } action: { old, new in
+                if interacting { chrome.scroll(delta: new - old) }
+            }
+        } else { legacy(content) }
+        #else
+        legacy(content)
+        #endif
+    }
+    private func legacy(_ content: Content) -> some View {
+        content.simultaneousGesture(DragGesture(minimumDistance: 8).onChanged { value in
+            guard abs(value.translation.height) > abs(value.translation.width) else { return }
+            chrome.scroll(delta: previousDrag - value.translation.height)
+            previousDrag = value.translation.height
+        }.onEnded { _ in previousDrag = 0 })
+    }
+}
+
 struct WaveGlassPanel: ViewModifier {
     var radius: CGFloat = 24
     var capsule = false
@@ -33,6 +78,36 @@ struct WaveGlassPanel: ViewModifier {
             content.background(.regularMaterial, in: RoundedRectangle(cornerRadius: radius))
                 .overlay { RoundedRectangle(cornerRadius: radius).stroke(Color.white.opacity(0.3), lineWidth: 0.5) }
         }
+    }
+}
+
+struct WavePlayerTransitionSource: ViewModifier {
+    var namespace: Namespace.ID?
+    @AppStorage("wave.liquidGlass") private var enabled = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ViewBuilder func body(content: Content) -> some View {
+        #if compiler(>=6.0)
+        if #available(iOS 18.0, *), enabled, !reduceMotion, let namespace {
+            content.matchedTransitionSource(id: "expanded-player", in: namespace)
+        } else { content }
+        #else
+        content
+        #endif
+    }
+}
+
+struct WavePlayerTransition: ViewModifier {
+    let namespace: Namespace.ID
+    @AppStorage("wave.liquidGlass") private var enabled = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ViewBuilder func body(content: Content) -> some View {
+        #if compiler(>=6.0)
+        if #available(iOS 18.0, *), enabled, !reduceMotion {
+            content.navigationTransition(.zoom(sourceID: "expanded-player", in: namespace))
+        } else { content }
+        #else
+        content
+        #endif
     }
 }
 
@@ -70,16 +145,5 @@ struct WaveServerSongMenu: ViewModifier {
         if let song = try? PlaybackSong.server(track, api: api) {
             content.modifier(WaveSongMenu(song: song, playQueue: { tracks.compactMap { try? PlaybackSong.server($0, api: api) } }))
         } else { content }
-    }
-}
-
-// Gestures have a clear direction and a deliberate threshold; no wrap at edges.
-enum WaveGestureNavigation {
-    static func section(after current: WaveSection, horizontal: CGFloat, vertical: CGFloat) -> WaveSection? {
-        guard abs(horizontal) >= 70, abs(horizontal) > abs(vertical) * 1.5,
-              let index = WaveSection.allCases.firstIndex(of: current) else { return nil }
-        let destination = index + (horizontal < 0 ? 1 : -1)
-        guard WaveSection.allCases.indices.contains(destination) else { return nil }
-        return WaveSection.allCases[destination]
     }
 }
