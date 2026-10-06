@@ -1,0 +1,28 @@
+name: Compile iOS app and widgets
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ['ios/**', '.github/workflows/ios-build.yml']
+  push:
+    paths: ['ios/**', '.github/workflows/ios-build.yml']
+permissions:
+  contents: read
+jobs:
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build app, widgets and run XCTest
+        run: python3 ios/scripts/validate-xcode.py
+      - name: Package verified sources
+        run: python3 ios/scripts/package-release.py --output ios/validated-release
+      - name: Save build results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-ios-build-results
+          path: |
+            ios/validation/
+            ios/validated-release/
+          if-no-files-found: ignore

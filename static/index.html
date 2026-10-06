@@ -3,6 +3,22 @@
 <html lang="es" data-theme="dark">
 
 <head>
+  <script>
+    // APP_BASE: set by server injection or defaults to ''
+    // Allows running at a subpath (e.g. /wave) without port
+    window.__APP_BASE = window.__APP_BASE || '';
+    (function() {
+      var base = window.__APP_BASE;
+      if (!base) return;
+      var _fetch = window.fetch;
+      window.fetch = function(url, opts) {
+        if (typeof url === 'string' && url.charAt(0) === '/' && url.indexOf(base) !== 0) {
+          url = base + url;
+        }
+        return _fetch.call(this, url, opts);
+      };
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>WAVE — Music Player</title>
@@ -25,9 +41,9 @@
       --surface-3: #2a2a32;
       --border: rgba(255, 255, 255, 0.06);
       --border-2: rgba(255, 255, 255, 0.10);
-      --accent: #ff6b35;
-      --accent-dim: rgba(255, 107, 53, 0.10);
-      --accent-glow: rgba(255, 107, 53, 0.18);
+      --accent: #3b82f6;
+      --accent-dim: rgba(59, 130, 246, 0.10);
+      --accent-glow: rgba(59, 130, 246, 0.18);
       --accent-2: #10b981;
       --accent-2-dim: rgba(16, 185, 129, 0.10);
       --share-red: #ef4444;
@@ -41,7 +57,7 @@
       --text-2: rgba(250, 250, 250, 0.42);
       --text-3: rgba(250, 250, 250, 0.22);
       --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.5);
-      --shadow-btn: 0 8px 24px rgba(255, 107, 53, 0.28);
+      --shadow-btn: 0 8px 24px rgba(59, 130, 246, 0.28);
       --radius: 14px;
       --radius-sm: 10px;
       --radius-xs: 6px;
@@ -49,7 +65,7 @@
       --font: 'DM Sans', -apple-system, sans-serif;
       --mono: 'IBM Plex Mono', monospace;
       --safe-bottom: env(safe-area-inset-bottom, 0px);
-      --nav-h: 56px;
+      --nav-h: 80px;
     }
 
     [data-theme="light"] {
@@ -62,9 +78,9 @@
       --surface-3: #ebebf1;
       --border: rgba(0, 0, 0, 0.06);
       --border-2: rgba(0, 0, 0, 0.10);
-      --accent: #e85d2a;
-      --accent-dim: rgba(232, 93, 42, 0.08);
-      --accent-glow: rgba(232, 93, 42, 0.12);
+      --accent: #2563eb;
+      --accent-dim: rgba(37, 99, 235, 0.08);
+      --accent-glow: rgba(37, 99, 235, 0.12);
       --accent-2: #059669;
       --share-red: #dc2626;
       --share-red-dim: rgba(220, 38, 38, 0.08);
@@ -74,7 +90,7 @@
       --text-2: rgba(17, 17, 19, 0.38);
       --text-3: rgba(17, 17, 19, 0.18);
       --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.08);
-      --shadow-btn: 0 8px 24px rgba(232, 93, 42, 0.18);
+      --shadow-btn: 0 8px 24px rgba(37, 99, 235, 0.18);
     }
 
     *,
@@ -225,7 +241,8 @@
       align-items: stretch;
       background: var(--bg-1);
       border-top: 1px solid var(--border);
-      padding-bottom: var(--safe-bottom);
+      padding-bottom: max(24px, var(--safe-bottom));
+      margin-bottom: 0;
       position: relative;
       z-index: 30;
       height: var(--nav-h)
@@ -854,12 +871,13 @@
       padding: 10px 12px;
       cursor: pointer;
       border-bottom: 1px solid var(--border);
-      transition: background .12s
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .folder-row:active,
     .track-row:active {
-      background: var(--surface-2)
+      background: var(--surface-2);
+      transform: scale(0.98);
     }
 
     .row-icon {
@@ -1764,7 +1782,7 @@
     }
 
     /* DESKTOP */
-    @media(min-width:768px) {
+    @media(min-width:1024px) {
       .app {
         max-width: 100%;
         flex-direction: row;
@@ -1971,7 +1989,7 @@
       }
     }
 
-    @media(max-width:767px) {
+    @media(max-width:1023px) {
       .desktop-sidebar {
         display: none !important
       }
@@ -1984,8 +2002,8 @@
       }
 
       .fs-bar {
-        padding: 8px 10px;
-        gap: 6px;
+        padding: 10px 16px;
+        gap: 8px;
       }
 
       .btn-label {
@@ -1993,9 +2011,292 @@
       }
 
       .breadcrumb {
-        max-width: 80px !important
+        max-width: 120px !important
+      }
+
+      .folder-row,
+      .track-row {
+        padding: 14px 16px; /* Touch-friendly height */
       }
     }
+
+    /* PROFILE SELECTION OVERLAY */
+    .profile-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--bg-0);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      transition: opacity 0.3s ease;
+    }
+    .profile-container {
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+    .profile-title {
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: var(--text-0);
+      letter-spacing: -0.02em;
+    }
+    .profile-subtitle {
+      font-size: 13px;
+      color: var(--text-2);
+      margin-bottom: 40px;
+      line-height: 1.5;
+    }
+    .profile-cards {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+    }
+    .profile-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .profile-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent);
+      background: var(--surface-2);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+    .profile-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .avatar-a {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    }
+    .avatar-m {
+      background: linear-gradient(135deg, #ec4899, #f43f5e);
+    }
+    .profile-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-1);
+    }
+
+    /* LIBRARY TOGGLE SEGMENTED */
+    .library-toggle-row {
+      display: flex;
+      background: var(--surface-2);
+      padding: 3px;
+      border-radius: var(--radius-sm);
+      margin-top: 4px;
+      border: 1px solid var(--border);
+    }
+    .lib-toggle-btn {
+      flex: 1;
+      text-align: center;
+      padding: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: var(--radius-xs);
+      color: var(--text-2);
+      background: transparent;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+    .lib-toggle-btn:hover {
+      color: var(--text-1);
+    }
+    .lib-toggle-btn.active {
+      color: var(--text-0);
+      background: var(--surface);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    /* BUTTONS TO ADD/REMOVE FROM LIBRARY */
+    .lib-add-btn {
+      background: none;
+      border: none;
+      color: var(--text-2);
+      font-size: 18px;
+      font-weight: 700;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .lib-add-btn:hover {
+      background: var(--surface-3);
+      color: var(--accent);
+      transform: scale(1.1);
+    }
+    .lib-add-btn.added {
+      color: var(--accent);
+    }
+
+    /* COLOR THEME SELECTORS */
+    .theme-buttons {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 4px;
+    }
+    .theme-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .theme-btn:hover {
+      transform: scale(1.1);
+    }
+    .theme-btn.active {
+      border-color: var(--text-0);
+      box-shadow: 0 0 8px var(--accent);
+    }
+    .theme-blue { background: #0ea5e9; }
+    .theme-purple { background: #a855f7; }
+    .theme-green { background: #10b981; }
+    .theme-orange { background: #ff6b35; }
+    .theme-rose { background: #f43f5e; }
+    .theme-amber { background: #f59e0b; }
+
+    /* RETRO CAROUSEL PERSPECTIVE VIEW */
+    .carousel-container {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding: 40px 15%;
+      height: 380px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      perspective: 1000px;
+      transform-style: preserve-3d;
+    }
+    .carousel-container::-webkit-scrollbar {
+      display: none;
+    }
+    .carousel-card {
+      flex: 0 0 220px;
+      width: 220px;
+      height: 280px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      scroll-snap-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 20px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+      cursor: pointer;
+      transition: border-color var(--transition), transform 0.1s ease, opacity 0.1s ease;
+      transform-origin: center center;
+      user-select: none;
+    }
+    .carousel-card:hover {
+      border-color: var(--accent);
+    }
+    .carousel-artwork {
+      width: 140px;
+      height: 140px;
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      background: var(--surface-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .carousel-artwork img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .carousel-artwork .icon {
+      width: 48px;
+      height: 48px;
+      color: var(--text-3);
+    }
+    .carousel-info {
+      text-align: center;
+      width: 100%;
+    }
+    .carousel-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-0);
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .carousel-subtitle {
+      font-size: 11px;
+      color: var(--text-2);
+      font-family: var(--mono);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+
+    /* Completed library experience */
+    .library-controls { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; }
+    .library-toggle-row { min-height:48px; margin:0; }
+    .lib-toggle-btn { min-height:42px; border:0; touch-action:manipulation; transition:color 180ms ease, background-color 180ms ease, transform 140ms cubic-bezier(.23,1,.32,1); }
+    .lib-toggle-btn:active,.view-mode-btn:active,.lib-add-btn:active,.profile-card:active,.theme-btn:active { transform:scale(.97); }
+    .view-mode-switch { display:flex; gap:4px; padding:3px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface-2); }
+    .view-mode-btn { width:44px; height:42px; display:grid; place-items:center; border-radius:var(--radius-xs); color:var(--text-2); transition:color 180ms ease,background-color 180ms ease,transform 140ms cubic-bezier(.23,1,.32,1); }
+    .view-mode-btn.active { color:var(--accent); background:var(--surface); }
+    #fileList { min-height:100%; padding-bottom:28px; }
+    #fileList.carousel-view { display:flex; align-items:center; gap:24px; min-height:min(470px,58vh); padding:32px max(8vw,28px) 44px; overflow-x:auto; overflow-y:hidden; overscroll-behavior-inline:contain; scroll-snap-type:x mandatory; scroll-padding-inline:max(8vw,28px); scrollbar-width:thin; scrollbar-color:var(--accent) var(--surface-2); perspective:900px; -webkit-overflow-scrolling:touch; }
+    #fileList.carousel-view .carousel-card { flex-basis:clamp(230px,68vw,300px); width:clamp(230px,68vw,300px); height:340px; padding:22px; transition:transform 220ms cubic-bezier(.23,1,.32,1),opacity 180ms ease,border-color 180ms ease; }
+    #fileList.carousel-view .carousel-artwork { width:min(190px,52vw); height:min(190px,52vw); border-radius:12px; }
+    .carousel-actions { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:auto; padding-top:14px; }
+    .carousel-play { min-width:48px; min-height:48px; border-radius:50%; display:grid; place-items:center; background:var(--accent); color:white; box-shadow:var(--shadow-btn); }
+    .lib-add-btn { width:44px; height:44px; touch-action:manipulation; }
+    .folder-row,.track-row { min-height:64px; }
+    .fs-btn,.hdr-btn,.mini-ctrl,.mini-play { min-width:44px; min-height:44px; }
+    .search-wrap input,#sortSelect { min-height:44px; font-size:14px !important; }
+    .profile-overlay[hidden] { display:none; }
+    .profile-overlay { opacity:1; transition:opacity 220ms ease; }
+    .profile-overlay.leaving { opacity:0; pointer-events:none; }
+    .profile-card { min-height:150px; transition:transform 180ms cubic-bezier(.23,1,.32,1),border-color 180ms ease,background-color 180ms ease; }
+    .theme-btn { width:44px; height:44px; border-width:3px; }
+    button:focus-visible,[role="button"]:focus-visible,input:focus-visible,select:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+    @media (hover:hover) and (pointer:fine) { .profile-card:hover { transform:translateY(-3px); } .carousel-card:hover { transform:translateY(-4px) rotateX(1deg); } }
+    @media (prefers-reduced-motion:reduce) { .view,.carousel-card,.profile-overlay { transition:opacity 160ms ease; transform:none !important; } .share-dot { animation:none !important; } }
 
     @media(min-width:1100px) {
       .desktop-sidebar {
@@ -2043,9 +2344,7 @@
         <div class="sidebar-nav-item share-nav" data-view="share" onclick="switchView('share')"><svg class="icon">
             <use href="#i-share" />
           </svg> Share <span class="share-dot-desktop"></span></div>
-        <div class="sidebar-nav-item" data-view="playlists" onclick="switchView('playlists')"><svg class="icon">
-            <use href="#i-play-circle" />
-          </svg><span>Playlists</span></div>
+        <div class="sidebar-nav-item" data-view="sounddrop" onclick="switchView('sounddrop')"><svg class="icon" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> SoundDrop</div>
         <div class="sidebar-nav-item" data-view="settings" onclick="switchView('settings')"><svg class="icon">
             <use href="#i-settings" />
           </svg> Settings</div>
@@ -2126,29 +2425,21 @@
                 <use href="#i-next" />
               </svg></button><button class="ctrl-btn" id="repeatBtn" onclick="toggleRepeat()"><svg class="icon">
                 <use href="#i-repeat" />
-              </svg></button><button class="ctrl-btn" onclick="plAddCurrent()" title="Add to playlist"><svg
-                class="icon">
-                <use href="#i-play-circle" />
               </svg></button><button class="ctrl-btn" onclick="shareCurrent(event)" title="Compartir canción"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button></div>
         </div>
         <div class="view" id="v-files">
           <div class="fs-bar">
-            <div class="fs-bar-top">
-              <div class="breadcrumb" id="breadcrumb"><span class="bc-accent">/</span> library</div>
-              <div class="fs-bar-actions">
-                <button class="fs-btn fs-btn-ghost" onclick="rescanMusic()"><svg class="icon">
-                    <use href="#i-refresh" />
-                  </svg></button>
-                <button class="fs-btn fs-btn-secondary" onclick="document.getElementById('folder-input').click()"><svg
-                    class="icon">
-                    <use href="#i-folder" />
-                  </svg><span class="btn-label"> Folder</span></button>
-                <button class="fs-btn fs-btn-primary" onclick="document.getElementById('file-input').click()"><svg
-                    class="icon" style="stroke:#fff">
-                    <use href="#i-plus" />
-                  </svg><span class="btn-label"> Files</span></button>
+            <div class="library-controls">
+              <div class="library-toggle-row" role="tablist" aria-label="Contenido de biblioteca">
+                <button class="lib-toggle-btn active" id="libMineBtn" role="tab" aria-selected="true" onclick="setLibraryScope('mine')">Mi biblioteca</button>
+                <button class="lib-toggle-btn" id="libCatalogBtn" role="tab" aria-selected="false" onclick="setLibraryScope('catalog')">Catálogo</button>
+              </div>
+              <div class="view-mode-switch" aria-label="Modo de visualización">
+                <button class="view-mode-btn active" id="listModeBtn" aria-label="Vista de lista" title="Vista de lista" onclick="setLibraryView('list')"><svg class="icon"><use href="#i-folder"/></svg></button>
+                <button class="view-mode-btn" id="carouselModeBtn" aria-label="Carrusel horizontal" title="Carrusel retro" onclick="setLibraryView('carousel')"><svg class="icon"><use href="#i-disc"/></svg></button>
               </div>
             </div>
+            <div class="breadcrumb" id="breadcrumb" hidden></div>
             <div class="search-sort-row">
               <div class="search-wrap">
                 <svg class="icon icon-sm"
@@ -2269,6 +2560,54 @@
           </div>
         </div>
 
+        <!-- ══════════════════════════════════════════
+             SOUNDDROP — Descarga desde SoundCloud
+             ══════════════════════════════════════════ -->
+        <div class="view" id="v-sounddrop">
+          <div style="padding:20px 16px;max-width:520px;margin:0 auto">
+            <div style="font-size:18px;font-weight:700;margin-bottom:4px">SoundDrop</div>
+            <div style="font-size:13px;color:var(--text-3);margin-bottom:20px">Añade y sincroniza playlists de SoundCloud en el servidor</div>
+            <div style="font-size:12px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px">Nueva playlist</div>
+
+            <!-- Input URL -->
+            <div style="margin-bottom:12px">
+              <label style="font-size:12px;font-weight:600;color:var(--text-2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">URL de SoundCloud</label>
+              <input id="sd-url" type="url" placeholder="https://soundcloud.com/usuario/sets/mi-playlist"
+                style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:14px;color:var(--text);outline:none"
+                oninput="sdUpdateFolder()" />
+            </div>
+
+            <!-- Nombre carpeta -->
+            <div style="margin-bottom:16px">
+              <label style="font-size:12px;font-weight:600;color:var(--text-2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Carpeta destino</label>
+              <input id="sd-folder" type="text" placeholder="nombre-de-la-carpeta"
+                style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:14px;color:var(--text);outline:none" />
+            </div>
+
+            <!-- Info existentes -->
+            <div id="sd-info" style="display:none;margin-bottom:14px;padding:10px 14px;background:var(--surface);border-radius:10px;font-size:13px;color:var(--text-2);border:1px solid var(--border)"></div>
+
+            <!-- Botón descargar -->
+            <button id="sd-btn" onclick="sdStartDownload()"
+              style="width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:20px">
+              <svg style="width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Descargar playlist
+            </button>
+
+            <!-- Progress / Log -->
+            <div id="sd-progress" style="display:none">
+              <div style="font-size:12px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Estado</div>
+              <div id="sd-status-bar" style="height:4px;background:var(--surface-2);border-radius:2px;overflow:hidden;margin-bottom:10px">
+                <div id="sd-bar-fill" style="height:100%;background:var(--accent);width:0%;transition:width .4s;border-radius:2px"></div>
+              </div>
+              <div id="sd-log" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12px;font-family:monospace;color:var(--text-2);max-height:200px;overflow-y:auto;line-height:1.7"></div>
+            </div>
+
+            <div style="font-size:12px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.6px;margin-top:28px;margin-bottom:8px">En tu biblioteca</div>
+            <div id="sd-library"><div style="padding:14px 0;color:var(--text-3);font-size:13px">Cargando...</div></div>
+          </div>
+        </div>
+
         <div class="view" id="v-settings">
           <div class="settings-group">
             <div class="settings-group-title">Playback</div>
@@ -2312,6 +2651,21 @@
               </div>
               <div class="toggle-sw on" id="s-theme"></div>
             </div>
+
+            <div class="settings-row" style="cursor:default"><svg class="icon"><use href="#i-disc" /></svg>
+              <div class="settings-label"><div class="settings-name">Color de acento</div><div class="settings-desc">Personaliza Wave</div></div>
+              <div class="theme-buttons" aria-label="Color de acento">
+                <button class="theme-btn theme-blue" data-accent="blue" aria-label="Sapphire Ice" onclick="setAccentTheme('blue',event)"></button>
+                <button class="theme-btn theme-purple" data-accent="purple" aria-label="Amethyst Glow" onclick="setAccentTheme('purple',event)"></button>
+                <button class="theme-btn theme-green" data-accent="green" aria-label="Emerald Forest" onclick="setAccentTheme('green',event)"></button>
+                <button class="theme-btn theme-rose" data-accent="rose" aria-label="Sunset Rose" onclick="setAccentTheme('rose',event)"></button>
+                <button class="theme-btn theme-amber" data-accent="amber" aria-label="Golden Amber" onclick="setAccentTheme('amber',event)"></button>
+              </div>
+            </div>
+            <div class="settings-row" onclick="changeProfile()"><svg class="icon"><use href="#i-share" /></svg>
+              <div class="settings-label"><div class="settings-name">Perfil local</div><div class="settings-desc" id="activeProfileLabel">Sin seleccionar</div></div>
+              <div class="settings-val">Cambiar</div>
+            </div>
             <div class="settings-row" onclick="toggleSetting('anim')"><svg class="icon">
                 <use href="#i-zap" />
               </svg>
@@ -2343,23 +2697,6 @@
               <div class="settings-val">v4.0</div>
             </div>
           </div>
-        </div>
-
-        <!-- PLAYLISTS VIEW -->
-        <div class="view" id="v-playlists">
-          <div class="view-header"
-            style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between">
-            <h2 style="margin:0;font-size:20px;font-weight:700">Playlists</h2>
-            <button class="share-btn share-btn-red" onclick="plCreatePrompt()" style="padding:6px 14px;font-size:12px">+
-              New</button>
-          </div>
-          <div id="plUserBar" style="padding:0 20px 12px;display:flex;gap:8px;align-items:center">
-            <span style="font-size:11px;color:var(--text-3)">User:</span>
-            <input type="text" id="plUser" placeholder="your name"
-              style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px;color:var(--text-1);outline:none"
-              oninput="plSaveUser(this.value)" />
-          </div>
-          <div id="plList" style="padding:0 12px"></div>
         </div>
 
       </div>
@@ -2395,15 +2732,24 @@
         <div class="bottom-nav-item share-tab" data-view="share" onclick="switchView('share')"><svg class="icon">
             <use href="#i-share" />
           </svg><span>Share</span><span class="share-dot"></span></div>
-        <div class="bottom-nav-item" data-view="playlists" onclick="switchView('playlists')"><svg class="icon">
-            <use href="#i-play-circle" />
-          </svg><span>Playlists</span></div>
+        <div class="bottom-nav-item" data-view="sounddrop" onclick="switchView('sounddrop')"><svg class="icon" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>SoundDrop</span></div>
         <div class="bottom-nav-item" data-view="settings" onclick="switchView('settings')"><svg class="icon">
             <use href="#i-settings" />
           </svg><span>Settings</span></div>
       </nav>
     </div>
   </div>
+  <section class="profile-overlay" id="profileOverlay" hidden aria-labelledby="profileTitle">
+    <div class="profile-container">
+      <div class="logo" style="margin-bottom:32px">W<span class="logo-accent">A</span>VE</div>
+      <h1 class="profile-title" id="profileTitle">¿Quién escucha?</h1>
+      <p class="profile-subtitle">Cada perfil conserva su propia biblioteca en este dispositivo.</p>
+      <div class="profile-cards">
+        <button class="profile-card" onclick="selectProfile('A')"><span class="profile-avatar avatar-a">A</span><span class="profile-name">Perfil A</span></button>
+        <button class="profile-card" onclick="selectProfile('M')"><span class="profile-avatar avatar-m">M</span><span class="profile-name">Perfil M</span></button>
+      </div>
+    </div>
+  </section>
   <input type="file" id="file-input" accept="audio/*,.mp3,.wav,.ogg,.flac,.aac,.m4a,.opus,.wma,.webm" multiple>
   <input type="file" id="folder-input" accept="audio/*,.mp3,.wav,.ogg,.flac,.aac,.m4a,.opus,.wma,.webm" multiple
     webkitdirectory directory>
@@ -2574,21 +2920,23 @@
   </svg>
 
   <script>
-    const MUSIC_BASE = '/music/', AUDIO_EXTS = /\.(mp3|wav|ogg|flac|aac|m4a|opus|wma|webm)$/i;
+    const MUSIC_BASE = (window.__APP_BASE || '') + '/music/', AUDIO_EXTS = /\.(mp3|wav|ogg|flac|aac|m4a|opus|wma|webm)$/i;
     const AVATAR_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#14b8a6'];
     const ANIMALS = ['Fox', 'Wolf', 'Bear', 'Owl', 'Hawk', 'Lynx', 'Deer', 'Raven', 'Hare', 'Orca', 'Viper', 'Eagle', 'Tiger', 'Puma', 'Crane'];
-    const S = { tracks: [], ci: -1, playing: false, shuffle: false, repeat: false, muted: false, vol: 0.7, share: { on: false, host: false, code: null, m: 1, users: [] }, eq: ['Flat', 'Bass+', 'Pop', 'Rock', 'Jazz'], eqi: 0, bars: [], folders: [], cf: null, loading: false, scrollSkip: true, me: null, likes: {} };
+    const S = { tracks: [], ci: -1, playing: false, shuffle: false, repeat: false, muted: false, vol: 0.7, share: { on: false, host: false, code: null, m: 1, users: [] }, eq: ['Flat', 'Bass+', 'Pop', 'Rock', 'Jazz'], eqi: 0, bars: [], folders: [], cf: null, loading: false, scrollSkip: true, me: null, likes: {}, profile: localStorage.getItem('_plUser') || '', libraryScope: 'mine', libraryView: localStorage.getItem('wave_library_view') || 'list', library: new Set() };
     const audio = new Audio(); audio.preload = 'metadata'; document.body.appendChild(audio);
-    // iOS PWA audio unlock: play silent buffer on first touch to unlock audio element
+    // iOS PWA audio unlock: play silent buffer on first touch to unlock audio element.
+    // Uses its own throwaway <audio> — must NOT touch the main `audio` element, since a
+    // real track can already be loading/playing in the same click that triggers this.
     let _audioUnlocked = false;
+    const _unlockEl = new Audio();
     function _unlockAudio() {
       if (_audioUnlocked) return;
-      const wasSrc = audio.src;
-      audio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRwLHAAAAAAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRwLHAAAAAAAAAAAAAAAAAAAA';
-      audio.volume = 0;
-      const p = audio.play();
-      if (p) p.then(() => { audio.pause(); audio.volume = S.muted ? 0 : S.vol; if (wasSrc) audio.src = wasSrc; _audioUnlocked = true; }).catch(() => { });
-      else { _audioUnlocked = true; }
+      _audioUnlocked = true;
+      _unlockEl.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRwLHAAAAAAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRwLHAAAAAAAAAAAAAAAAAAAA';
+      _unlockEl.volume = 0;
+      const p = _unlockEl.play();
+      if (p) p.then(() => { _unlockEl.pause(); }).catch(() => { });
     }
     document.addEventListener('touchstart', _unlockAudio, { once: true });
     document.addEventListener('touchend', _unlockAudio, { once: true });
@@ -2596,7 +2944,7 @@
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     const isMobile = isIOS || /Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window && window.innerWidth < 1024);
     const isPWA = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-    const isDesk = () => window.innerWidth >= 768;
+    const isDesk = () => window.innerWidth >= 1024;
     let actx = null, analyser = null, fdata = null, anim = null, gain = null, srcNode = null, ctxConn = false, wl = null;
 
     // User Identity
@@ -2698,7 +3046,7 @@
       } catch (e) { showToast('Load locally'); }
       S.loading = false; renderFL();
     }
-    function _fetchMeta() { const paths = S.tracks.map(t => t.relPath).filter(Boolean); if (!paths.length) return; const chunkSize = 100; let i = 0; function next() { if (i >= paths.length) return; const chunk = paths.slice(i, i + chunkSize); i += chunkSize; fetch('/api/metadata/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paths: chunk }) }).then(r => r.ok ? r.json() : {}).then(meta => { for (const t of S.tracks) { const m = meta[t.relPath]; if (!m) continue; if (m.title) t.name = m.title; if (m.artist) t.artist = m.artist; if (m.duration) t.duration = m.duration; if (m.has_art) t.coverUrl = '/api/artwork/' + encodeURIComponent(t.relPath).replace(/%2F/g, '/'); if (m.play_count) t.playCount = m.play_count; } for (const f of S.folders) { if (!f.coverUrl) { const fc = f.tracks.find(t => t.coverUrl); if (fc) f.coverUrl = fc.coverUrl; } } renderFL(); updTUI(); setTimeout(next, 50); }).catch(() => setTimeout(next, 200)); } next(); }
+    function _fetchMeta() { const paths = S.tracks.map(t => t.relPath).filter(Boolean); if (!paths.length) return; const chunkSize = 100; let i = 0; function next() { if (i >= paths.length) return; const chunk = paths.slice(i, i + chunkSize); i += chunkSize; fetch('/api/metadata/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paths: chunk }) }).then(r => r.ok ? r.json() : {}).then(meta => { for (const t of S.tracks) { const m = meta[t.relPath]; if (!m) continue; if (m.title) t.name = m.title; if (m.artist) t.artist = m.artist; if (m.duration) t.duration = m.duration; if (m.has_art) t.coverUrl = (window.__APP_BASE || '') + '/api/artwork/' + encodeURIComponent(t.relPath).replace(/%2F/g, '/'); if (m.play_count) t.playCount = m.play_count; } for (const f of S.folders) { if (!f.coverUrl) { const fc = f.tracks.find(t => t.coverUrl); if (fc) f.coverUrl = fc.coverUrl; } } renderFL(); updTUI(); setTimeout(next, 50); }).catch(() => setTimeout(next, 200)); } next(); }
 
     // Playback
     // Pre-init AudioContext on any user gesture (click/touch)
@@ -2709,11 +3057,38 @@
 
     // Preload helper for next track
     const _preloader = new Audio(); _preloader.preload = 'auto'; _preloader.volume = 0;
-    function preloadNext() { const ni = S.shuffle ? -1 : (S.ci + 1) % S.tracks.length; if (ni >= 0 && ni < S.tracks.length && S.tracks[ni]) { _preloader.src = S.tracks[ni].url } }
+    // Skip on mobile: starting a second decoder session right as the current track begins
+    // playing can steal the audio focus on phones with a single hardware decode session,
+    // cutting the just-started track to silence.
+    function preloadNext() { if (isMobile) return; const ni = S.shuffle ? -1 : (S.ci + 1) % S.tracks.length; if (ni >= 0 && ni < S.tracks.length && S.tracks[ni]) { _preloader.src = S.tracks[ni].url } }
 
+    // Must call audio.play() synchronously within the user-gesture call stack — mobile
+    // autoplay policies block it once it's deferred behind an async event (e.g. 'canplay').
     function _doPlay() { if (!isMobile) ensACEarly(); audio.play().then(() => { if (!isMobile && !document.hidden) { connAC(); startVis() } reqWL(); startKA(); preloadNext() }).catch(() => { S.playing = false; updPI(); showToast('Tap play') }) }
     function loadT(i) { if (i < 0 || i >= S.tracks.length) return; S.ci = i; const t = S.tracks[i]; audio.pause(); audio.src = t.url; audio.volume = S.muted ? 0 : S.vol; updTUI(); renderFL(); updMS(); if (S.playing) { _doPlay(); } if (t.relPath) fetch('/api/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ track: t.relPath }) }).then(r => r.json()).then(d => { if (d.count) { t.playCount = d.count; renderFL() } }).catch(() => { }); }
     function togglePlay() { if (!S.tracks.length) { document.getElementById('file-input').click(); return } if (S.ci < 0) S.ci = 0; if (!audio.src || audio.src === location.href) { S.playing = true; loadT(S.ci); updPI(); return; } if (!isMobile) ensACEarly(); if (audio.paused) audio.play().then(() => { S.playing = true; updPI(); renderFL(); if (!isMobile && !document.hidden) { connAC(); startVis() } updMS(); reqWL(); startKA() }).catch(() => showToast('Cannot play')); else { audio.pause(); S.playing = false; updPI(); renderFL(); relWL(); stopKA() } }
+
+    // Remote control (Siri Shortcuts / Apple Watch): polls the server for
+    // play commands sent from outside this tab and applies them locally.
+    let _remoteSeq = 0;
+    function _remoteApply(d) {
+      if (!d.folder || !d.filename) return;
+      const relPath = d.folder + '/' + d.filename;
+      const idx = S.tracks.findIndex(t => t.relPath === relPath);
+      S.playing = true;
+      if (idx >= 0) { loadT(idx); } else { audio.pause(); audio.src = (window.__APP_BASE || '') + d.url; audio.currentTime = 0; _doPlay(); updMS(); }
+      updPI();
+      showToast('▶ ' + (d.name || 'Remote'));
+    }
+    function _remotePoll() {
+      fetch((window.__APP_BASE || '') + '/api/remote/poll?since=' + _remoteSeq).then(r => r.json()).then(d => {
+        if (d && d.changed && d.seq > _remoteSeq) { _remoteSeq = d.seq; _remoteApply(d); }
+      }).catch(() => { });
+    }
+    function initRemote() {
+      fetch((window.__APP_BASE || '') + '/api/remote/poll').then(r => r.json()).then(d => { _remoteSeq = d.seq || 0; }).catch(() => { });
+      setInterval(_remotePoll, 3000);
+    }
     function prevTrack() { if (!S.tracks.length) return; if (audio.currentTime > 3) { audio.currentTime = 0; return } let i = S.ci - 1; if (i < 0) i = S.tracks.length - 1; if (S.share.on) { shareChangeTrack(i); return } S.playing = true; loadT(i); updPI() }
     function nextTrack() { if (!S.tracks.length) return; let i; if (S.shuffle) i = Math.floor(Math.random() * S.tracks.length); else i = (S.ci + 1) % S.tracks.length; if (S.share.on) { shareChangeTrack(i); return } S.playing = true; loadT(i); updPI() }
     function onLoad() { const t = S.tracks[S.ci]; if (t) t.duration = audio.duration; renderFL(); genWave(); updPS() }
@@ -2739,6 +3114,162 @@
     // Controls
     function toggleShuffle() { S.shuffle = !S.shuffle; document.getElementById('shuffleBtn')?.classList.toggle('active', S.shuffle); document.getElementById('shuffleBtnD')?.classList.toggle('active', S.shuffle); showToast(S.shuffle ? 'Shuffle on' : 'Shuffle off') }
     function toggleRepeat() { S.repeat = !S.repeat; document.getElementById('repeatBtn')?.classList.toggle('active', S.repeat); document.getElementById('repeatBtnD')?.classList.toggle('active', S.repeat); showToast(S.repeat ? 'Repeat on' : 'Repeat off') }
+
+
+    // Profiles, themes and personal library
+    const ACCENT_THEMES = {
+      blue: ['#0ea5e9', 'rgba(14, 165, 233, 0.12)', 'rgba(14, 165, 233, 0.24)'], // Sapphire Ice
+      purple: ['#a855f7', 'rgba(168, 85, 247, 0.12)', 'rgba(168, 85, 247, 0.24)'], // Amethyst Glow
+      green: ['#10b981', 'rgba(16, 185, 129, 0.12)', 'rgba(16, 185, 129, 0.24)'], // Emerald Forest
+      rose: ['#f43f5e', 'rgba(244, 63, 94, 0.12)', 'rgba(244, 63, 94, 0.24)'], // Sunset Rose
+      amber: ['#f59e0b', 'rgba(245, 158, 11, 0.12)', 'rgba(245, 158, 11, 0.24)'] // Golden Amber
+    };
+    function libraryKey(track) { return track.relPath || [track.folder, track.name].join('::'); }
+    function profileLibraryKey() { return 'wave_library_' + S.profile; }
+    function loadProfileLibrary() {
+      let saved = [];
+      try { saved = JSON.parse(localStorage.getItem(profileLibraryKey()) || '[]'); } catch (_) {}
+      S.library = new Set(Array.isArray(saved) ? saved : []);
+      const label = document.getElementById('activeProfileLabel');
+      if (label) label.textContent = S.profile ? 'Perfil ' + S.profile : 'Sin seleccionar';
+    }
+    function saveProfileLibrary() { if (S.profile) localStorage.setItem(profileLibraryKey(), JSON.stringify([...S.library])); }
+    function selectProfile(profile) {
+      S.profile = profile;
+      localStorage.setItem('_plUser', profile);
+      _plUser = profile;
+      localStorage.setItem('pl_user', profile);
+      const plInput = document.getElementById('plUser');
+      if (plInput) plInput.value = profile;
+      loadProfileLibrary();
+      const overlay = document.getElementById('profileOverlay');
+      overlay.classList.add('leaving');
+      setTimeout(() => { overlay.hidden = true; overlay.classList.remove('leaving'); }, 220);
+      renderFL();
+      showToast('Perfil ' + profile);
+    }
+    function changeProfile() {
+      const overlay = document.getElementById('profileOverlay');
+      overlay.hidden = false;
+      requestAnimationFrame(() => overlay.querySelector('.profile-card')?.focus());
+    }
+    function initProfile() {
+      loadProfileLibrary();
+      const overlay = document.getElementById('profileOverlay');
+      overlay.hidden = !!S.profile;
+      if (!S.profile) requestAnimationFrame(() => overlay.querySelector('.profile-card')?.focus());
+    }
+    function setAccentTheme(name, event) {
+      if (event) event.stopPropagation();
+      const palette = ACCENT_THEMES[name] || ACCENT_THEMES.blue;
+      const root = document.documentElement;
+      root.style.setProperty('--accent', palette[0]);
+      root.style.setProperty('--accent-dim', palette[1]);
+      root.style.setProperty('--accent-glow', palette[2]);
+      root.style.setProperty('--shadow-btn', '0 8px 24px ' + palette[2]);
+      localStorage.setItem('wave_accent', name);
+      document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.accent === name));
+    }
+    function initAccentTheme() { setAccentTheme(localStorage.getItem('wave_accent') || 'blue'); }
+    function setLibraryScope(scope) {
+      S.libraryScope = scope === 'catalog' ? 'catalog' : 'mine';
+      S.cf = null;
+      document.getElementById('libMineBtn').classList.toggle('active', S.libraryScope === 'mine');
+      document.getElementById('libCatalogBtn').classList.toggle('active', S.libraryScope === 'catalog');
+      document.getElementById('libMineBtn').setAttribute('aria-selected', S.libraryScope === 'mine');
+      document.getElementById('libCatalogBtn').setAttribute('aria-selected', S.libraryScope === 'catalog');
+      renderFL();
+    }
+    function setLibraryView(mode) {
+      S.libraryView = mode === 'carousel' ? 'carousel' : 'list';
+      localStorage.setItem('wave_library_view', S.libraryView);
+      document.getElementById('listModeBtn').classList.toggle('active', S.libraryView === 'list');
+      document.getElementById('carouselModeBtn').classList.toggle('active', S.libraryView === 'carousel');
+      renderFL();
+    }
+    function toggleLibraryTrack(index, event) {
+      if (event) event.stopPropagation();
+      const track = S.tracks[index];
+      if (!track || !S.profile) { changeProfile(); return; }
+      const key = libraryKey(track);
+      const adding = !S.library.has(key);
+      if (adding) S.library.add(key); else S.library.delete(key);
+      saveProfileLibrary();
+      renderFL();
+      showToast(adding ? 'Añadida a tu biblioteca' : 'Eliminada de tu biblioteca');
+    }
+
+    function toggleLibraryFolder(index, event) {
+      if (event) event.stopPropagation();
+      const folder = S.folders[index];
+      if (!folder || !folder.tracks.length || !S.profile) { if (!S.profile) changeProfile(); return; }
+      const keys = folder.tracks.map(libraryKey);
+      const complete = keys.every(key => S.library.has(key));
+      keys.forEach(key => complete ? S.library.delete(key) : S.library.add(key));
+      saveProfileLibrary();
+      renderFL();
+      showToast(complete ? 'Playlist eliminada de tu biblioteca' : 'Playlist completa añadida');
+    }
+    function libraryFolderAction(folder) {
+      const index = S.folders.indexOf(folder);
+      const complete = folder.tracks.length > 0 && folder.tracks.every(track => S.library.has(libraryKey(track)));
+      const label = complete ? 'Quitar playlist completa' : 'Añadir playlist completa';
+      return '<button class="lib-add-btn' + (complete ? ' added' : '') + '" onclick="toggleLibraryFolder(' + index + ',event)" aria-label="' + label + '" title="' + label + '">' + (complete ? '✓' : '+') + '</button>';
+    }
+
+    function scopedTracks(tracks) {
+      return S.libraryScope === 'catalog' ? tracks : tracks.filter(track => S.library.has(libraryKey(track)));
+    }
+    function libraryAction(track) {
+      const index = S.tracks.indexOf(track), added = S.library.has(libraryKey(track));
+      const label = added ? 'Quitar de mi biblioteca' : 'Añadir a mi biblioteca';
+      return '<button class="lib-add-btn' + (added ? ' added' : '') + '" onclick="toggleLibraryTrack(' + index + ',event)" aria-label="' + label + '" title="' + label + '">' + (added ? '✓' : '+') + '</button>';
+    }
+    function trackListRow(track, includeFolder) {
+      const gi = S.tracks.indexOf(track), current = gi === S.ci;
+      const cover = track.coverUrl ? '<div class="row-icon"><img src="' + esc(track.coverUrl) + '"/></div>' : '<div class="row-icon">' + (current && S.playing ? '<div class="eq-indicator"><span></span><span></span><span></span></div>' : '<svg class="icon icon-sm"><use href="#i-music"/></svg>') + '</div>';
+      const plays = track.playCount ? '<span class="row-plays">▶ ' + track.playCount + '</span>' : '';
+      const sub = esc(track.artist || '') + (includeFolder ? ' · ' + esc(track.folder || '') : '');
+      return '<div class="track-row' + (current ? ' playing' : '') + '" onclick="selT(' + gi + ')">' + cover + '<div class="row-info"><div class="row-name">' + esc(track.name) + '</div><div class="row-sub">' + sub + '</div></div><div class="row-meta"><div class="row-dur">' + (track.duration ? fmt(track.duration) : '--:--') + '</div>' + plays + '</div>' + libraryAction(track) + _likeBtn(track.relPath) + _shareBtn(track) + '</div>';
+    }
+
+    function setupCarouselMotion(container) {
+      if (container._carouselMotion) container.removeEventListener('scroll', container._carouselMotion);
+      if (container._carouselWheel) container.removeEventListener('wheel', container._carouselWheel);
+      if (S.libraryView !== 'carousel' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      let frame = 0;
+      const update = () => {
+        frame = 0;
+        const bounds = container.getBoundingClientRect(), center = bounds.left + bounds.width / 2;
+        container.querySelectorAll('.carousel-card').forEach(card => {
+          const rect = card.getBoundingClientRect();
+          const distance = Math.max(-1, Math.min(1, (rect.left + rect.width / 2 - center) / bounds.width));
+          const scale = 1 - Math.abs(distance) * .12;
+          card.style.transform = 'rotateY(' + (-distance * 12) + 'deg) scale(' + scale + ')';
+          card.style.opacity = String(1 - Math.abs(distance) * .28);
+        });
+      };
+      const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); };
+      const onWheel = e => { if (e.deltaY !== 0) { e.preventDefault(); container.scrollLeft += e.deltaY; } };
+      container._carouselMotion = onScroll;
+      container._carouselWheel = onWheel;
+      container.addEventListener('scroll', onScroll, { passive: true });
+      container.addEventListener('wheel', onWheel, { passive: false });
+      requestAnimationFrame(update);
+    }
+
+
+    function carouselFolderCard(group) {
+      const folder = group.folder, index = S.folders.indexOf(folder);
+      const art = folder.coverUrl ? '<img src="' + esc(folder.coverUrl) + '" alt="Portada de ' + esc(folder.name) + '"/>' : '<svg class="icon"><use href="#i-folder"/></svg>';
+      return '<article class="carousel-card" onclick="openF(' + index + ')" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openF(' + index + ')}"><div class="carousel-artwork">' + art + '</div><div class="carousel-info"><div class="carousel-title">' + esc(folder.name) + '</div><div class="carousel-subtitle">' + group.tracks.length + ' canciones</div></div><div class="carousel-actions"><button class="carousel-play" aria-label="Abrir ' + esc(folder.name) + '" onclick="event.stopPropagation();openF(' + index + ')"><svg class="icon"><use href="#i-chevr"/></svg></button>' + libraryFolderAction(folder) + '</div></article>';
+    }
+
+    function carouselCard(track) {
+      const gi = S.tracks.indexOf(track), current = gi === S.ci;
+      const art = track.coverUrl ? '<img src="' + esc(track.coverUrl) + '" alt="Portada de ' + esc(track.name) + '"/>' : '<svg class="icon"><use href="#i-disc"/></svg>';
+      return '<article class="carousel-card' + (current ? ' playing' : '') + '" onclick="selT(' + gi + ')" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();selT(' + gi + ')}"><div class="carousel-artwork">' + art + '</div><div class="carousel-info"><div class="carousel-title">' + esc(track.name) + '</div><div class="carousel-subtitle">' + esc(track.artist || track.folder || 'Wave') + '</div></div><div class="carousel-actions"><button class="carousel-play" aria-label="Reproducir" onclick="event.stopPropagation();selT(' + gi + ')"><svg class="icon"><use href="#i-play"/></svg></button>' + libraryAction(track) + '</div></article>';
+    }
 
     // File list
     function renderFLL() { document.getElementById('fileList').innerHTML = '<div class="empty-state"><svg class="icon" style="width:40px;height:40px;animation:spin 1.2s linear infinite"><use href="#i-loader"/></svg><h3>Scanning...</h3></div>' }
@@ -2815,19 +3346,54 @@
       if (!_searchQ) return tracks;
       return tracks.filter(t => t.name.toLowerCase().includes(_searchQ) || (t.artist || '').toLowerCase().includes(_searchQ) || (t.folder || '').toLowerCase().includes(_searchQ));
     }
+
     function renderFL() {
-      const el = document.getElementById('fileList'), bc = document.getElementById('breadcrumb'); if (!S.tracks.length && !S.folders.length && !S.loading) { bc.innerHTML = '<span class="bc-accent">/</span> Music'; el.innerHTML = '<div class="empty-state"><svg class="icon" style="width:40px;height:40px"><use href="#i-music"/></svg><h3>No files</h3><p>Tap Files or Folder to add music</p></div>'; return }
-      if (_searchQ && S.cf === null) {
-        bc.innerHTML = '<span class="bc-accent">/</span> search: "' + esc(_searchQ) + '"';
-        const filtered = _sortTracks(_filterTracks(S.tracks));
-        if (!filtered.length) { el.innerHTML = '<div class="empty-state"><p style="color:var(--text-3)">No results</p></div>'; return; }
-        let h = '';
-        for (const t of filtered) { const gi = S.tracks.indexOf(t), ic = gi === S.ci, cv = t.coverUrl ? '<div class="row-icon"><img src="' + esc(t.coverUrl) + '"/></div>' : '<div class="row-icon">' + (ic && S.playing ? '<div class="eq-indicator"><span></span><span></span><span></span></div>' : '<svg class="icon icon-sm"><use href="#i-music"/></svg>') + '</div>'; const pc = t.playCount ? '<span class="row-plays">▶ ' + t.playCount + '</span>' : ''; h += '<div class="track-row' + (ic ? ' playing' : '') + '" onclick="selT(' + gi + ')">' + cv + '<div class="row-info"><div class="row-name">' + esc(t.name) + '</div><div class="row-sub">' + esc(t.artist) + ' · ' + esc(t.folder) + '</div></div><div class="row-meta"><div class="row-dur">' + (t.duration ? fmt(t.duration) : '--:--') + '</div>' + pc + '</div>' + _likeBtn(t.relPath) + _shareBtn(t) + '</div>'; }
-        el.innerHTML = h; return;
+      const el = document.getElementById('fileList'), bc = document.getElementById('breadcrumb');
+      el.classList.toggle('carousel-view', S.libraryView === 'carousel');
+      const allScoped = scopedTracks(S.tracks);
+      if (!S.tracks.length && !S.folders.length && !S.loading) {
+        bc.innerHTML = '<span class="bc-accent">/</span> Música';
+        el.classList.remove('carousel-view');
+        el.innerHTML = '<div class="empty-state"><svg class="icon"><use href="#i-music"/></svg><h3>No hay música</h3><p>Añade archivos o vuelve a explorar el servidor.</p></div>'; return;
       }
-      if (S.cf === null) { bc.innerHTML = '<span class="bc-accent">/</span> library'; const sortedFolders = _sortBy === 'name-desc' ? [...S.folders].reverse() : S.folders; el.innerHTML = sortedFolders.map((f, idx) => { const ri = S.folders.indexOf(f); const c = f.count || f.tracks.length, p = S.ci >= 0 && S.tracks[S.ci]?.folder === f.name, cv = f.coverUrl ? '<div class="row-icon"><img src="' + esc(f.coverUrl) + '"/></div>' : '<div class="row-icon"><svg class="icon"><use href="#i-folder"/></svg></div>'; return '<div class="folder-row' + (p ? ' playing' : '') + '" onclick="openF(' + ri + ')">' + cv + '<div class="row-info"><div class="row-name">' + esc(f.name) + '</div><div class="row-sub">' + c + ' track' + (c !== 1 ? 's' : '') + '</div></div>' + (p ? '<div class="eq-indicator"><span></span><span></span><span></span></div>' : '<div class="row-dur"><svg class="icon icon-sm" style="color:var(--text-3)"><use href="#i-chevr"/></svg></div>') + '</div>' }).join(''); return } const fol = S.folders.find(f => f.name === S.cf); if (!fol) { S.cf = null; renderFL(); return } bc.innerHTML = '<span class="bc-accent" onclick="goBack()" style="cursor:pointer">/</span> <span class="bc-accent" onclick="goBack()" style="cursor:pointer">library</span> / ' + esc(fol.name); let h = ''; const viewTracks = _sortTracks(_filterTracks(fol.tracks)); for (const t of viewTracks) { const gi = S.tracks.indexOf(t), ic = gi === S.ci, cv = t.coverUrl ? '<div class="row-icon"><img src="' + esc(t.coverUrl) + '"/></div>' : '<div class="row-icon">' + (ic && S.playing ? '<div class="eq-indicator"><span></span><span></span><span></span></div>' : '<svg class="icon icon-sm"><use href="#i-music"/></svg>') + '</div>'; const pc = t.playCount ? '<span class="row-plays">▶ ' + t.playCount + '</span>' : ''; h += '<div class="track-row' + (ic ? ' playing' : '') + '" onclick="selT(' + gi + ')">' + cv + '<div class="row-info"><div class="row-name">' + esc(t.name) + '</div><div class="row-sub">' + esc(t.artist) + '</div></div><div class="row-meta"><div class="row-dur">' + (t.duration ? fmt(t.duration) : '--:--') + '</div>' + pc + '</div>' + _likeBtn(t.relPath) + _shareBtn(t) + '</div>' } el.innerHTML = h
+      if (S.libraryScope === 'mine' && !allScoped.length) {
+        bc.innerHTML = '<span class="bc-accent">/</span> Perfil ' + esc(S.profile || '');
+        el.classList.remove('carousel-view');
+        el.innerHTML = '<div class="empty-state"><svg class="icon"><use href="#i-disc"/></svg><h3>Tu biblioteca está vacía</h3><p>Abre Catálogo y pulsa + para guardar canciones en este perfil.</p><button class="fs-btn fs-btn-primary" style="min-height:48px;margin-top:8px" onclick="setLibraryScope(\'catalog\')">Explorar catálogo</button></div>'; return;
+      }
+      let visible;
+      if (_searchQ) {
+        visible = _sortTracks(_filterTracks(allScoped));
+        bc.innerHTML = '<span class="bc-accent">/</span> búsqueda: “' + esc(_searchQ) + '”';
+      } else if (S.cf !== null) {
+        const folder = S.folders.find(item => item.name === S.cf);
+        if (!folder) { S.cf = null; renderFL(); return; }
+        visible = _sortTracks(scopedTracks(folder.tracks));
+        bc.innerHTML = '<span class="bc-accent" onclick="goBack()">/ biblioteca</span> / ' + esc(folder.name);
+      }
+      if (visible) {
+        if (!visible.length) { el.classList.remove('carousel-view'); el.innerHTML = '<div class="empty-state"><h3>Sin resultados</h3><p>Prueba otra búsqueda o revisa el catálogo.</p></div>'; return; }
+        el.innerHTML = S.libraryView === 'carousel' ? visible.map(carouselCard).join('') : visible.map(track => trackListRow(track, !!_searchQ)).join('');
+        setupCarouselMotion(el);
+        return;
+      }
+      bc.innerHTML = '<span class="bc-accent">/</span> ' + (S.libraryScope === 'mine' ? 'mi biblioteca' : 'catálogo');
+      const folders = S.folders.map(folder => ({ folder, tracks: scopedTracks(folder.tracks) })).filter(group => group.tracks.length);
+      const ordered = _sortBy === 'name-desc' ? [...folders].reverse() : folders;
+      if (S.libraryView === 'carousel') {
+        el.innerHTML = ordered.map(carouselFolderCard).join('');
+        setupCarouselMotion(el);
+        return;
+      }
+      el.innerHTML = ordered.map(group => {
+        const folder = group.folder, ri = S.folders.indexOf(folder), playing = S.ci >= 0 && S.tracks[S.ci]?.folder === folder.name;
+        const cover = folder.coverUrl ? '<div class="row-icon"><img src="' + esc(folder.coverUrl) + '"/></div>' : '<div class="row-icon"><svg class="icon"><use href="#i-folder"/></svg></div>';
+        return '<div class="folder-row' + (playing ? ' playing' : '') + '" onclick="openF(' + ri + ')">' + cover + '<div class="row-info"><div class="row-name">' + esc(folder.name) + '</div><div class="row-sub">' + group.tracks.length + ' canciones</div></div>' + libraryFolderAction(folder) + '<div class="row-dur"><svg class="icon icon-sm"><use href="#i-chevr"/></svg></div></div>';
+      }).join('');
     }
+
     function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') }
+    function dlFolder(rawName) { const url = (window.__APP_BASE || '') + '/api/folder/' + encodeURIComponent(rawName) + '/zip'; showToast('Preparing zip…'); const a = document.createElement('a'); a.href = url; a.download = rawName + '.zip'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
     function openF(i) { const f = S.folders[i]; if (!f) return; S.cf = f.name; renderFL(); document.getElementById('v-files').scrollTop = 0 }
     function goBack() { S.cf = null; renderFL() }
     function playF(fn) { if (!fn) return; const f = S.folders.find(x => x.name === fn); if (!f || !f.tracks.length) return; const gi = S.tracks.indexOf(f.tracks[0]); if (gi === -1) return; if (S.share.on) { shareChangeTrack(gi); showToast('Playing: ' + fn); return } S.playing = true; loadT(gi); updPI(); showToast('Playing: ' + fn) }
@@ -3094,7 +3660,252 @@
     function cycleEQ() { S.eqi = (S.eqi + 1) % S.eq.length; document.querySelector('.setting-val-eq').textContent = S.eq[S.eqi]; showToast('EQ: ' + S.eq[S.eqi]) }
 
     // Navigation
-    function switchView(name) { document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.querySelectorAll('.bottom-nav-item').forEach(n => n.classList.remove('active')); document.querySelectorAll('.sidebar-nav-item').forEach(n => n.classList.remove('active')); if (isDesk() && name === 'player') name = 'files'; document.getElementById('v-' + name).classList.add('active'); document.querySelector('.bottom-nav-item[data-view="' + name + '"]')?.classList.add('active'); document.querySelector('.sidebar-nav-item[data-view="' + name + '"]')?.classList.add('active'); if (name === 'playlists') plLoad(); requestAnimationFrame(updNav) }
+    function switchView(name) { document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.querySelectorAll('.bottom-nav-item').forEach(n => n.classList.remove('active')); document.querySelectorAll('.sidebar-nav-item').forEach(n => n.classList.remove('active')); if (isDesk() && name === 'player') name = 'files'; document.getElementById('v-' + name).classList.add('active'); document.querySelector('.bottom-nav-item[data-view="' + name + '"]')?.classList.add('active'); document.querySelector('.sidebar-nav-item[data-view="' + name + '"]')?.classList.add('active'); if (name === 'sounddrop') sdLoadSources(); requestAnimationFrame(updNav) }
+
+    // ── SoundDrop ─────────────────────────────────────────────
+    let _sdJobId = null;
+    let _sdPollTimer = null;
+    const _sdSyncJobs = new Map();
+    let _sdSources = [];
+
+    function sdSuggestFolder(url) {
+      try {
+        const u = new URL(url);
+        const parts = u.pathname.split('/').filter(Boolean);
+        // /user/sets/playlist-name → playlist-name
+        // /user/album → album
+        const setsIdx = parts.indexOf('sets');
+        if (setsIdx !== -1 && parts[setsIdx + 1]) return decodeURIComponent(parts[setsIdx + 1]).replace(/-/g, ' ');
+        if (parts.length >= 2) return decodeURIComponent(parts[parts.length - 1]).replace(/-/g, ' ');
+        return parts[0] || '';
+      } catch { return ''; }
+    }
+
+    function sdUpdateFolder() {
+      const url = document.getElementById('sd-url').value.trim();
+      const folderEl = document.getElementById('sd-folder');
+      if (!folderEl.value && url) folderEl.value = sdSuggestFolder(url);
+      sdCheckExisting();
+    }
+
+    async function sdCheckExisting() {
+      const url = document.getElementById('sd-url').value.trim();
+      const folder = document.getElementById('sd-folder').value.trim();
+      const info = document.getElementById('sd-info');
+      if (!folder) { info.style.display = 'none'; return; }
+      try {
+        const r = await fetch('/api/playlist/info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, folder_name: folder })
+        });
+        const d = await r.json();
+        if (d.existing > 0) {
+          info.style.display = 'block';
+          info.innerHTML = '<svg style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:5px;fill:none;stroke:currentColor;stroke-width:2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+            + `La carpeta <strong style="color:var(--text)">${folder}</strong> ya tiene <strong style="color:var(--text)">${d.existing} canciones</strong>. Solo se descargarán las nuevas.`;
+        } else {
+          info.style.display = 'none';
+        }
+      } catch { info.style.display = 'none'; }
+    }
+
+    function sdLog(msg, type = 'info') {
+      const log = document.getElementById('sd-log');
+      const colors = { ok: 'var(--accent-2, #10b981)', err: '#f87171', info: 'var(--text-2)', warn: '#fbbf24' };
+      log.innerHTML += `<div style="color:${colors[type] || colors.info}">${msg}</div>`;
+      log.scrollTop = log.scrollHeight;
+    }
+
+    async function sdStartDownload() {
+      const url = document.getElementById('sd-url').value.trim();
+      const folder = document.getElementById('sd-folder').value.trim();
+      if (!url || !folder) { showToast('Introduce URL y nombre de carpeta'); return; }
+      if (!url.includes('soundcloud.com')) { showToast('URL de SoundCloud requerida'); return; }
+
+      // Reset UI
+      document.getElementById('sd-progress').style.display = 'block';
+      document.getElementById('sd-log').innerHTML = '';
+      document.getElementById('sd-bar-fill').style.width = '10%';
+      document.getElementById('sd-btn').disabled = true;
+      document.getElementById('sd-btn').textContent = 'Descargando...';
+
+      sdLog(`Iniciando descarga de: ${url}`, 'info');
+      sdLog(`Carpeta destino: ${folder}`, 'info');
+
+      try {
+        const r = await fetch('/api/playlist/download', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, folder_name: folder })
+        });
+        const d = await r.json();
+        if (!r.ok) { sdLog('Error: ' + (d.error || 'Error desconocido'), 'err'); sdReset(); return; }
+        _sdJobId = d.job_id;
+        sdLog(`Job iniciado (${d.job_id.slice(0,8)}...)`, 'ok');
+        sdPoll();
+      } catch (e) {
+        sdLog('Error de red: ' + e.message, 'err');
+        sdReset();
+      }
+    }
+
+    function sdPoll() {
+      if (!_sdJobId) return;
+      clearTimeout(_sdPollTimer);
+      _sdPollTimer = setTimeout(async () => {
+        try {
+          const r = await fetch('/api/status/' + _sdJobId);
+          const d = await r.json();
+          if (d.status === 'downloading') {
+            document.getElementById('sd-bar-fill').style.width = '60%';
+            sdLog('Descargando desde SoundCloud...', 'info');
+            sdPoll();
+          } else if (d.status === 'queued') {
+            document.getElementById('sd-bar-fill').style.width = '20%';
+            sdPoll();
+          } else if (d.status === 'done') {
+            document.getElementById('sd-bar-fill').style.width = '100%';
+            const newC = d.new_count || d.files?.length || 0;
+            const skip = d.skipped || 0;
+            const dup  = d.duplicates_removed || 0;
+            sdLog(`Descarga completada`, 'ok');
+            sdLog(`Canciones nuevas: ${newC}`, 'ok');
+            if (skip > 0) sdLog(`Ya existían (saltadas): ${skip}`, 'info');
+            if (dup  > 0) sdLog(`Duplicados eliminados: ${dup}`, 'warn');
+            sdLog(`Total en carpeta: ${d.total_in_folder || '—'}`, 'info');
+            const folder = document.getElementById('sd-folder').value.trim();
+            sdLoadSources();
+            sdReset();
+            showToast(`${newC} canciones nuevas en "${folder}"`);
+            // Refrescar biblioteca
+            setTimeout(() => { if (typeof loadMusic === 'function') loadMusic(); }, 1000);
+          } else if (d.status === 'error') {
+            sdLog('Error: ' + (d.error || 'desconocido'), 'err');
+            sdReset();
+          } else {
+            sdPoll();
+          }
+        } catch { sdPoll(); }
+      }, 2500);
+    }
+
+    function sdReset() {
+      document.getElementById('sd-btn').disabled = false;
+      document.getElementById('sd-btn').innerHTML = '<svg style="width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Descargar playlist';
+      _sdJobId = null;
+    }
+
+    function sdRelativeTime(timestamp) {
+      if (!timestamp) return 'sin sincronizar';
+      const seconds = Math.max(0, Math.floor(Date.now() / 1000 - timestamp));
+      if (seconds < 60) return 'sync ahora';
+      if (seconds < 3600) return `sync hace ${Math.floor(seconds / 60)} min`;
+      if (seconds < 86400) return `sync hace ${Math.floor(seconds / 3600)} h`;
+      return `sync hace ${Math.floor(seconds / 86400)} d`;
+    }
+
+    async function sdMigrateHistory() {
+      if (localStorage.getItem('sd_history_migrated') === '1') return;
+      let history = [];
+      try { history = JSON.parse(localStorage.getItem('sd_history') || '[]'); } catch {}
+      await Promise.all(history.filter(h => h?.folder && h?.url).map(h => fetch('/api/sources', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder_name: h.folder, url: h.url })
+      }).catch(() => null)));
+      localStorage.setItem('sd_history_migrated', '1');
+      localStorage.removeItem('sd_history');
+    }
+
+    async function sdLoadSources() {
+      const el = document.getElementById('sd-library');
+      if (!el) return;
+      try {
+        await sdMigrateHistory();
+        const r = await fetch('/api/sources');
+        if (!r.ok) throw new Error('No se pudo cargar la biblioteca');
+        _sdSources = await r.json();
+        sdRenderSources();
+      } catch (e) {
+        el.innerHTML = `<div style="padding:14px 0;color:#f87171;font-size:13px">${esc(e.message)}</div>`;
+      }
+    }
+
+    function sdRenderSources() {
+      const el = document.getElementById('sd-library');
+      if (!_sdSources.length) { el.innerHTML = '<div style="padding:14px 0;color:var(--text-3);font-size:13px">No hay carpetas con audio.</div>'; return; }
+      el.innerHTML = _sdSources.map((source, index) => {
+        const active = _sdSyncJobs.has(source.folder);
+        const cover = source.coverUrl
+          ? `<div class="row-icon"><img src="${esc(source.coverUrl)}"/></div>`
+          : '<div class="row-icon"><svg class="icon"><use href="#i-folder"/></svg></div>';
+        const subtitle = active ? 'Sincronizando...' : `${source.count} tracks · ${source.url ? sdRelativeTime(source.last_sync) : 'sin URL vinculada'}`;
+        return `<div data-sd-folder="${esc(source.folder)}" style="padding:9px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:10px">${cover}<div class="row-info"><div class="row-name">${esc(source.folder)}</div><div class="row-sub" data-sd-status>${subtitle}</div></div>
+          <button title="Sincronizar" aria-label="Sincronizar ${esc(source.folder)}" ${active ? 'disabled' : ''} onclick="sdSync(${index})" style="width:34px;height:34px;border:0;border-radius:50%;background:var(--surface-2);color:var(--text-2);display:grid;place-items:center;cursor:pointer;flex-shrink:0">
+            ${active ? '<span style="width:15px;height:15px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite"></span>' : '<svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.5 9a9 9 0 0 1 14.8-3.4L23 10M1 14l4.7 4.4A9 9 0 0 0 20.5 15"/></svg>'}
+          </button></div>
+          ${source.url ? '' : `<div data-sd-link style="display:none;gap:8px;margin:9px 0 2px 54px"><input type="url" placeholder="https://soundcloud.com/..." style="min-width:0;flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:12px"><button onclick="sdLinkAndSync(${index})" style="border:0;border-radius:8px;padding:8px 11px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer">Vincular</button></div>`}
+        </div>`;
+      }).join('');
+    }
+
+    async function sdSync(index) {
+      const source = _sdSources[index];
+      if (!source) return;
+      if (!source.url) {
+        const row = document.querySelector(`[data-sd-folder="${CSS.escape(source.folder)}"]`);
+        const link = row?.querySelector('[data-sd-link]');
+        if (link) { link.style.display = 'flex'; link.querySelector('input').focus(); }
+        return;
+      }
+      await sdBeginSync(source);
+    }
+
+    async function sdLinkAndSync(index) {
+      const source = _sdSources[index];
+      const row = document.querySelector(`[data-sd-folder="${CSS.escape(source.folder)}"]`);
+      const url = row?.querySelector('[data-sd-link] input')?.value.trim() || '';
+      if (!url.includes('soundcloud.com')) { showToast('URL de SoundCloud requerida'); return; }
+      try {
+        const r = await fetch('/api/sources', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ folder_name: source.folder, url }) });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || 'No se pudo vincular');
+        source.url = url;
+        await sdBeginSync(source);
+      } catch (e) { showToast(e.message); }
+    }
+
+    async function sdBeginSync(source) {
+      try {
+        const r = await fetch('/api/playlist/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ folder_name: source.folder }) });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error === 'already_syncing' ? 'Ya se está sincronizando' : (d.error || 'Error al sincronizar'));
+        _sdSyncJobs.set(source.folder, d.job_id);
+        sdRenderSources();
+        sdPollSync(source.folder, d.job_id);
+      } catch (e) { showToast(e.message); }
+    }
+
+    function sdPollSync(folder, jobId) {
+      setTimeout(async () => {
+        if (_sdSyncJobs.get(folder) !== jobId) return;
+        try {
+          const r = await fetch('/api/status/' + encodeURIComponent(jobId));
+          const d = await r.json();
+          if (d.status === 'done' || d.status === 'error') {
+            _sdSyncJobs.delete(folder);
+            const row = document.querySelector(`[data-sd-folder="${CSS.escape(folder)}"]`);
+            const status = row?.querySelector('[data-sd-status]');
+            if (status) status.textContent = d.status === 'error' ? `Error: ${d.error || 'desconocido'}` : ((d.new_count || 0) ? `+${d.new_count} nuevas` : 'Sin cambios');
+            if (d.status === 'done') { if (typeof loadMusic === 'function') loadMusic(); else scanServer(); }
+            setTimeout(sdLoadSources, 2500);
+            return;
+          }
+        } catch {}
+        sdPollSync(folder, jobId);
+      }, 2500);
+    }
 
     // ═══════ PLAYLISTS ═══════
     let _plUser = localStorage.getItem('pl_user') || '';
@@ -3115,8 +3926,46 @@
     function rescanMusic() { if (S.playing) { audio.pause(); S.playing = false; updPI() } S.tracks = []; S.folders = []; S.ci = -1; S.cf = null; updTUI(); scanServer() }
     function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2200) }
 
+    function initSwipeGestures() {
+      // Swipe back on Playlists Detail view
+      const plList = document.getElementById('plList');
+      if (plList) {
+        let startX = 0, startY = 0;
+        plList.addEventListener('touchstart', e => {
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+        }, { passive: true });
+        plList.addEventListener('touchend', e => {
+          if (_plView !== 'detail') return;
+          const diffX = e.changedTouches[0].clientX - startX;
+          const diffY = e.changedTouches[0].clientY - startY;
+          if (diffX > 100 && Math.abs(diffY) < 50) {
+            plBack();
+          }
+        }, { passive: true });
+      }
+
+      // Swipe back on Folder Detail view in library
+      const fileList = document.getElementById('fileList');
+      if (fileList) {
+        let startX = 0, startY = 0;
+        fileList.addEventListener('touchstart', e => {
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+        }, { passive: true });
+        fileList.addEventListener('touchend', e => {
+          if (S.cf === null) return;
+          const diffX = e.changedTouches[0].clientX - startX;
+          const diffY = e.changedTouches[0].clientY - startY;
+          if (diffX > 100 && Math.abs(diffY) < 50) {
+            goBack();
+          }
+        }, { passive: true });
+      }
+    }
+
     // INIT
-    initUser(); genWave(); scanServer(); setupScrollSkip(); loadLikes();
+    initUser(); initAccentTheme(); initProfile(); setLibraryView(S.libraryView); genWave(); scanServer(); setupScrollSkip(); loadLikes(); initSwipeGestures(); initRemote();
     if (isDesk()) switchView('files');
     requestAnimationFrame(updNav); window.addEventListener('resize', updNav);
     document.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; if (e.code === 'Space') { e.preventDefault(); togglePlay() } else if (e.code === 'ArrowRight') nextTrack(); else if (e.code === 'ArrowLeft') prevTrack() });

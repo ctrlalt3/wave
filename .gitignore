@@ -9,4 +9,17 @@ __pycache__/
 *.log
 metadata_cache.json
 play_stats.json
+sources.json
 .env
+remote_token.txt
+
+.wave-cloud/
+
+# release binaries / build artifacts (kept out of git, distributed separately)
+static/desktop-releases/
+static/ios-releases/
+static/ios-candidates/
+zips/
+
+# iOS version snapshots are preserved as git branches (ios-v0.11.x), not as a directory
+ios-variants/

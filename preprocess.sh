@@ -11,7 +11,7 @@
 
 set -euo pipefail
 
-DOWNLOADS="/home/ubuntu/.openclaw/workspace/files/downloads"
+DOWNLOADS="/home/ubuntu/services/wave/downloads"
 KEEP_ORIGINALS=false
 PROCESSED=0
 SKIPPED=0

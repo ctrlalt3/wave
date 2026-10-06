@@ -1,0 +1,71 @@
+{
+  "name": "wave-desktop",
+  "version": "1.5.0",
+  "private": true,
+  "description": "Wave para macOS: servidor y m\u00fasica local",
+  "author": "Wave",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.cjs",
+    "dist:mac": "electron-builder --mac dmg --arm64 --x64 && node scripts/package-mac.cjs",
+    "dist:zip": "electron-builder --mac dir --arm64 --x64 && node scripts/sign-mac.cjs && python3 scripts/verify-mac.py dist/mac-arm64/Wave.app dist/mac/Wave.app && node scripts/package-mac.cjs",
+    "test:smoke": "electron test/smoke.cjs",
+    "package:mac": "node scripts/package-mac.cjs",
+    "sign:mac": "node scripts/sign-mac.cjs",
+    "verify:mac": "python3 scripts/verify-mac.py dist/mac-arm64/Wave.app dist/mac/Wave.app"
+  },
+  "devDependencies": {
+    "electron": "43.7.7",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "app.wave.music",
+    "productName": "Wave",
+    "asar": true,
+    "files": [
+      "main.cjs",
+      "library.cjs",
+      "audio-response.cjs",
+      "preload.cjs",
+      "ui/**/*",
+      "package.json",
+      "server-client.cjs",
+      "cloud-client.cjs"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.music",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icon.icns",
+      "identity": "-",
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "hardenedRuntime": true
+    },
+    "artifactName": "Wave-${version}-${arch}.${ext}",
+    "dmg": {
+      "title": "Wave",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "music-metadata": "^12.0.0"
+  }
+}

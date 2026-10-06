@@ -1,7 +1,7 @@
 #!/bin/bash
 # Script para mantener SoundDrop activo
 
-APP_DIR="/home/ubuntu/.openclaw/workspace/files"
+APP_DIR="/home/ubuntu/services/wave"
 PID_FILE="/tmp/sounddrop.pid"
 LOG_FILE="/tmp/sounddrop.log"
 
