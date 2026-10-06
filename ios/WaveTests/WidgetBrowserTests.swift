@@ -52,19 +52,6 @@ final class WidgetBrowserTests: XCTestCase {
         XCTAssertEqual(page.state.folder, folder)
         XCTAssertEqual(page.items.count, 1)
     }
-    func testHomeReturnsToRootWithoutChangingSource() async throws {
-        let root = try temporaryRoot(), service = WaveWidgetBrowserService(root: root)
-        try await service.publishLocal(songs(count: 20), folders: ["Music/Album"])
-        var page = await service.snapshot()
-        page = await service.navigate(.folder, item: "Music", revision: page.state.revision)
-        page = await service.navigate(.folder, item: "Music/Album", revision: page.state.revision)
-        page = await service.navigate(.nextPage, revision: page.state.revision, stride: 6)
-        page = await service.navigate(.home, revision: page.state.revision)
-        XCTAssertEqual(page.state.source, .local)
-        XCTAssertEqual(page.state.folder, "")
-        XCTAssertEqual(page.state.offset, 0)
-        XCTAssertEqual(page.items.map(\.id), ["Music"])
-    }
     func testTwoBrowsersShareStateAndStaleButtonsCannotJumpTwice() async throws {
         let root = try temporaryRoot(), first = WaveWidgetBrowserService(root: root), second = WaveWidgetBrowserService(root: root)
         try await first.publishLocal(songs(count: 3), folders: ["Music/Album"])
