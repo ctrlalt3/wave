@@ -132,7 +132,7 @@ struct WaveformSeekBar: View {
     @EnvironmentObject private var progress: WavePlaybackProgress
     @State private var samples: [Double] = []
     @State private var loading = true
-    @GestureState private var dragTime: Double? = nil
+    @State private var dragTime: Double?
     private var duration: Double { max(0, max(progress.duration, song.track.duration)) }
     private var position: Double { dragTime ?? progress.elapsed }
     var body: some View {
@@ -150,13 +150,12 @@ struct WaveformSeekBar: View {
                         context.fill(path, with: .color(played ? (onArtwork ? .white : WaveTheme.accent) : (onArtwork ? .white.opacity(0.35) : WaveTheme.secondary.opacity(0.25))))
                     }
                 }.contentShape(Rectangle())
-                    .highPriorityGesture(DragGesture(minimumDistance: 0).updating($dragTime) { value, time, _ in
+                    .highPriorityGesture(DragGesture(minimumDistance: 0).onChanged { value in
                         guard duration > 0 else { return }
-                        time = min(1, max(0, value.location.x / max(1, geometry.size.width))) * duration
-                    }.onEnded { value in
-                        guard duration > 0, player.current?.id == song.id else { return }
-                        let target = min(1, max(0, value.location.x / max(1, geometry.size.width))) * duration
-                        player.seek(target)
+                        dragTime = min(1, max(0, value.location.x / max(1, geometry.size.width))) * duration
+                    }.onEnded { _ in
+                        if let dragTime { player.seek(dragTime) }
+                        dragTime = nil
                     })
                     .accessibilityElement().accessibilityLabel("Posición de reproducción")
                     .accessibilityValue(WaveTheme.time(position) + " de " + WaveTheme.time(duration))
@@ -173,7 +172,7 @@ struct WaveformSeekBar: View {
             }.font(.caption.monospacedDigit()).foregroundStyle(onArtwork ? Color.white.opacity(0.9) : WaveTheme.secondary)
         }
         .task(id: song.id) {
-            samples = []; loading = true
+            samples = []; loading = true; dragTime = nil
             guard let url = song.url else { loading = false; return }
             let result = await WaveformCache.shared.samples(for: url)
             guard !Task.isCancelled else { return }

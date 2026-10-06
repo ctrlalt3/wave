@@ -1,7 +1,6 @@
 import Combine
 import Foundation
 import SwiftUI
-import UIKit
 
 enum FolderPlaylistSource: String, Codable { case local, server }
 struct FolderPlaylist: Codable, Identifiable {
@@ -15,7 +14,6 @@ struct LibraryPreferencesState: Codable {
     var favorites: Set<String> = []
     var playlists: [FolderPlaylist] = []
     var localHierarchyVersion: Int? = nil
-    var reconciledServers: Set<String>? = nil
     var visiblePlaylists: [FolderPlaylist] {
         playlists.filter { playlist in
             playlist.source != .local || !playlists.contains {
@@ -61,28 +59,15 @@ actor LibraryPreferencesStorage {
         return try save(state)
     }
 
-    func linkLocalFavorites(_ links: [String: String]) throws -> LibraryPreferencesState {
-        var state = try read()
-        for (local, cloud) in links where state.favorites.contains(local) {
-            state.favorites.remove(local)
-            state.favorites.insert(cloud)
-        }
-        return try save(state)
-    }
     func favorite(_ id: String, liked: Bool) throws -> LibraryPreferencesState {
         var state = try read()
         if liked { state.favorites.insert(id) } else { state.favorites.remove(id) }
         return try save(state)
     }
-    func synchronizeServer(_ base: String, paths: Set<String>, markReconciled: Bool = false) throws -> LibraryPreferencesState {
+    func synchronizeServer(_ base: String, paths: Set<String>) throws -> LibraryPreferencesState {
         var state = try read()
         state.favorites = state.favorites.filter { !$0.hasPrefix(base) }
         state.favorites.formUnion(paths.map { base + $0 })
-        if markReconciled {
-            var reconciled = state.reconciledServers ?? []
-            reconciled.insert(base)
-            state.reconciledServers = reconciled
-        }
         return try save(state)
     }
     func add(_ playlist: FolderPlaylist) throws -> LibraryPreferencesState {
@@ -101,7 +86,6 @@ final class LibraryPreferences: ObservableObject {
     @Published private(set) var state = LibraryPreferencesState()
     @Published private(set) var ready = false
     @Published private(set) var saving = false
-    @Published private(set) var pendingLikes: Set<String> = []
     @Published var error: String?
     private let storage: LibraryPreferencesStorage
     private let serverSession: URLSession
@@ -147,10 +131,9 @@ final class LibraryPreferences: ObservableObject {
         await writeLike(song, desired: true)
     }
     private func writeLike(_ song: PlaybackSong, desired: Bool?) async -> Bool {
-        guard ready, !pendingLikes.contains(song.id) else { return false }
-        pendingLikes.insert(song.id)
+        guard ready else { return false }
         await beginSaving()
-        defer { pendingLikes.remove(song.id); finishSaving() }
+        defer { finishSaving() }
         error = nil
         let liked = desired ?? !state.favorites.contains(song.id)
         do {
@@ -173,33 +156,9 @@ final class LibraryPreferences: ObservableObject {
         guard !Task.isCancelled else { return }
         do {
             let likes: [String: Bool] = try await api.get(["api", "likes"])
-            var paths = Set(likes.filter { $0.value && WaveAPI.safePath($0.key) }.map(\.key))
-            let base = api.base.absoluteString
-            let recovering = state.reconciledServers?.contains(base) != true
-            if recovering {
-                let savedPaths = state.favorites.compactMap { id -> String? in
-                    guard id.hasPrefix(base) else { return nil }
-                    let path = String(id.dropFirst(base.count))
-                    return WaveAPI.safePath(path) ? path : nil
-                }
-                for path in savedPaths where !paths.contains(path) {
-                    try Task.checkCancellation()
-                    try await api.setLike(path, liked: true)
-                    paths.insert(path)
-                }
-            }
-            state = try await storage.synchronizeServer(base, paths: paths, markReconciled: recovering)
+            let paths = Set(likes.filter { $0.value && WaveAPI.safePath($0.key) }.map(\.key))
+            state = try await storage.synchronizeServer(api.base.absoluteString, paths: paths)
         } catch { if !Task.isCancelled { self.error = "No se pudieron actualizar los likes del servidor: \(error.localizedDescription)" } }
-    }
-    func linkCloudFavorites(_ songs: [LocalSong]) async {
-        await beginSaving()
-        defer { finishSaving() }
-        let links = Dictionary(songs.compactMap { song -> (String, String)? in
-            guard let path = song.cloudPath, let server = song.cloudServer else { return nil }
-            return ("local:" + song.id, server + path)
-        }, uniquingKeysWith: { first, _ in first })
-        do { state = try await storage.linkLocalFavorites(links) }
-        catch { self.error = error.localizedDescription }
     }
     func addFolder(_ folder: String, source: FolderPlaylistSource, server: String? = nil) async {
         guard ready, WaveAPI.safePath(folder) else { return }
@@ -224,19 +183,11 @@ final class LibraryPreferences: ObservableObject {
 }
 struct LikeButton: View {
     let song: PlaybackSong
-    var compact = false
     @EnvironmentObject private var preferences: LibraryPreferences
-    @Environment(\.colorScheme) private var scheme
     var body: some View {
-        Button { UISelectionFeedbackGenerator().selectionChanged(); Task { await preferences.toggle(song) } } label: {
-            Image(systemName: preferences.liked(song.id) ? "heart.fill" : "heart")
-                .foregroundStyle(preferences.liked(song.id) ? Color.red : (scheme == .dark ? Color.white : Color.black))
-                .shadow(color: (scheme == .dark ? Color.white : Color.black).opacity(0.15), radius: 2)
-                .frame(width: compact ? 44 : 48, height: compact ? 44 : 56).contentShape(Rectangle())
-        }.buttonStyle(.borderless).disabled(!preferences.ready || preferences.pendingLikes.contains(song.id))
-            .overlay {
-                if preferences.pendingLikes.contains(song.id) { ProgressView().tint(.red).allowsHitTesting(false) }
-            }
+        Button { Task { await preferences.toggle(song) } } label: {
+            Image(systemName: preferences.liked(song.id) ? "heart.fill" : "heart").foregroundStyle(WaveTheme.accent).frame(width: 44, height: 44)
+        }.buttonStyle(.borderless).disabled(!preferences.ready || preferences.saving)
             .accessibilityLabel(preferences.liked(song.id) ? "Quitar Me gusta" : "Me gusta")
             .accessibilityValue(preferences.liked(song.id) ? "Activado" : "Desactivado")
     }

@@ -19,6 +19,23 @@ final class DiscoverTests: XCTestCase {
 }
 
 @MainActor
+final class NavigationChromeTests: XCTestCase {
+    func testScrollUpExpandsWithoutReturningToTheTop() {
+        let chrome = WaveNavigationChrome()
+        chrome.scroll(delta: 20)
+        XCTAssertTrue(chrome.compact)
+        chrome.scroll(delta: -18)
+        XCTAssertFalse(chrome.compact)
+    }
+    func testSmallJitterDoesNotCollapseNavigation() {
+        let chrome = WaveNavigationChrome()
+        chrome.scroll(delta: 4)
+        chrome.scroll(delta: -4)
+        XCTAssertFalse(chrome.compact)
+    }
+}
+
+@MainActor
 final class DiscoverFavoritesTests: XCTestCase {
     func testDiscoverSaveSelectsFolderHeartAndPersistsWithoutMovingSong() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -123,29 +140,6 @@ final class SharedLikeSavingTests: XCTestCase {
         XCTAssertEqual(feed.remainingSongs(favorites: preferences.state.favorites).map(\.id), [song.id])
     }
 
-    func testOldCachedHeartsAreRecoveredOnceWithoutResurrectingLaterUnlikes() async throws {
-        let (_, api, song, root) = try await fixture()
-        defer { try? FileManager.default.removeItem(at: root) }
-        let storage = LibraryPreferencesStorage(file: root.appendingPathComponent("preferences.json"))
-        _ = try await storage.favorite(song.id, liked: true)
-        _ = try await storage.favorite("local:previously-saved", liked: true)
-        let preferences = LibraryPreferences(storage: storage, serverSession: api.session)
-        await preferences.load()
-        await preferences.synchronizeServer(api)
-        var remote: [String: Bool] = try await api.get(["api", "likes"])
-        XCTAssertEqual(remote[song.track.relPath], true)
-        XCTAssertTrue(preferences.liked("local:previously-saved"))
-        XCTAssertTrue(preferences.state.reconciledServers?.contains(api.base.absoluteString) == true)
-        try await api.setLike(song.track.relPath, liked: false)
-        let restored = LibraryPreferences(storage: storage, serverSession: api.session)
-        await restored.load()
-        await restored.synchronizeServer(api)
-        remote = try await api.get(["api", "likes"])
-        XCTAssertEqual(remote[song.track.relPath], false)
-        XCTAssertFalse(restored.liked(song.id))
-        XCTAssertTrue(restored.liked("local:previously-saved"))
-    }
-
     func testProgressTicksDoNotInvalidateLibrariesObservingPlayer() {
         let player = WavePlayer()
         var playerChanges = 0
@@ -201,19 +195,4 @@ private final class LikeSavingProtocol: URLProtocol {
         client?.urlProtocolDidFinishLoading(self)
     }
     override func stopLoading() {}
-}
-
-final class GestureNavigationTests: XCTestCase {
-    func testDeliberateHorizontalSwipeChangesOneSection() {
-        XCTAssertEqual(WaveGestureNavigation.section(after: .server, horizontal: -90, vertical: 10), .local)
-        XCTAssertEqual(WaveGestureNavigation.section(after: .playlists, horizontal: 90, vertical: 10), .local)
-    }
-    func testVerticalOrSmallGesturesDoNotSwitchTabs() {
-        XCTAssertNil(WaveGestureNavigation.section(after: .local, horizontal: 50, vertical: 0))
-        XCTAssertNil(WaveGestureNavigation.section(after: .local, horizontal: 90, vertical: 100))
-    }
-    func testSectionEdgesDoNotWrap() {
-        XCTAssertNil(WaveGestureNavigation.section(after: .server, horizontal: 90, vertical: 0))
-        XCTAssertNil(WaveGestureNavigation.section(after: .settings, horizontal: -90, vertical: 0))
-    }
 }

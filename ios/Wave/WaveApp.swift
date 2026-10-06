@@ -1,14 +1,12 @@
 import SwiftUI
-import WidgetKit
 import UniformTypeIdentifiers
 import UIKit
 
 @main
-@MainActor
 struct WaveApp: App {
     @AppStorage("wave.appearance") private var appearance = WaveAppearance.system.rawValue
     @AppStorage("wave.accent") private var accent = WaveAccent.system.rawValue
-    @StateObject private var player = WavePlayer.shared
+    @StateObject private var player = WavePlayer()
     @StateObject private var local = LocalLibrary()
     @StateObject private var device = DeviceMusicLibrary()
     @StateObject private var preferences = LibraryPreferences()
@@ -35,107 +33,63 @@ enum WaveSection: String, CaseIterable, Identifiable {
 }
 
 struct WaveHome: View {
-    @AppStorage("wave.server") private var synchronizationServer = ""
-    @Environment(\.scenePhase) private var phase
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var section: WaveSection = .server
     @State private var expanded = false
-    @StateObject private var charging = WaveChargingMonitor()
-    @AppStorage("wave.dock.automatic") private var automaticDock = true
-    @State private var dockDismissed = false
-    @State private var manualDock = false
-    @State private var widgetCatalogTask: Task<Void, Never>?
-    @State private var layout = WaveAdaptiveLayout.portrait
+    @State private var columns: NavigationSplitViewVisibility = .all
     @EnvironmentObject private var local: LocalLibrary
     @EnvironmentObject private var preferences: LibraryPreferences
     @EnvironmentObject private var player: WavePlayer
-    private var automaticDockActive: Bool { automaticDock && charging.isCharging && charging.isDeviceLandscape && layout.isLandscape }
-    private var showsDock: Bool { manualDock || (automaticDockActive && !dockDismissed) }
     var body: some View {
-        GeometryReader { geometry in
-            let measured = WaveAdaptiveLayout(size: geometry.size)
-            HStack(spacing: 0) {
-                WaveSidebar(section: $section, expanded: $expanded, layout: measured) { manualDock = true }
-                    .frame(width: measured.sidebarWidth).clipped()
-                    .accessibilityHidden(!measured.usesSidebar)
-                compactTabs.frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(WaveTheme.background)
-            }
-            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
-            .background(WaveTheme.background)
-            .accessibilityHidden(showsDock)
-            .environment(\.waveLayout, measured)
-            .overlay {
-                if showsDock {
-                    WaveDockView { manualDock = false; dockDismissed = true }
-                        .environment(\.waveLayout, measured)
+        Group {
+            if sizeClass == .regular {
+                NavigationSplitView(columnVisibility: $columns) {
+                    VStack(alignment: .leading, spacing: 24) {
+                        Label { Text("WAVE").tracking(3) } icon: { Image(systemName: "waveform") }
+                            .font(.title2.weight(.semibold)).padding(18)
+                        Text("BIBLIOTECAS").font(.caption2.monospaced()).tracking(2)
+                            .foregroundStyle(WaveTheme.secondary).padding(.horizontal, 18)
+                        ForEach(WaveSection.allCases) { item in
+                            Button { select(item) } label: {
+                                Label(item.title, systemImage: item.icon)
+                                    .frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                                    .background(section == item ? WaveTheme.selected : Color.clear,
+                                                in: RoundedRectangle(cornerRadius: 6))
+                            }.buttonStyle(.plain).padding(.horizontal, 12)
+                        }
+                        Spacer()
+                        Text("WAVE PARA IOS · 0.6.2").font(.caption2.monospaced())
+                            .foregroundStyle(WaveTheme.secondary).padding(24)
+                    }.background(WaveTheme.sidebar)
+                } detail: {
+                    playerPage(section).id(section)
                 }
+            } else {
+                compactTabs
             }
-            .onChange(of: measured, initial: true) { _, value in layout = value }
+        }.safeAreaInset(edge: .top, spacing: 0) {
+            HStack(spacing: 10) {
+                Image(systemName: "waveform").font(.title3.weight(.semibold)).foregroundStyle(WaveTheme.accent)
+                Text("WAVE").font(.headline).tracking(3)
+                Spacer()
+                Text("0.6.2").font(.caption.monospacedDigit()).foregroundStyle(WaveTheme.secondary).accessibilityIdentifier("wave.build-version")
+            }.padding(.horizontal, 22).padding(.vertical, 12).background(WaveTheme.sidebar)
         }
-        .background(WaveTheme.background.ignoresSafeArea())
-        .task {
-            player.connectFavorites(preferences)
-            await preferences.load()
-            await local.load()
-            if local.ready { await preferences.prepareLocalPlaylists(local.songs, replacements: local.duplicateReplacements) }
-            if WavePlaybackStorage.read() != nil { await player.restoreWidgetQueue() }
-            player.publishWidgetLibrary(localCount: local.songs.count, favoritesCount: preferences.state.favorites.count, playlistsCount: preferences.state.visiblePlaylists.count)
-            publishWidgetCatalog()
-        }
-        .task(id: synchronizationServer) {
-            while !Task.isCancelled {
-                await synchronizeFavorites()
-                do { try await Task.sleep(for: .seconds(15)) } catch { return }
+            .task {
+                await preferences.load()
+                await local.load()
+                if local.ready { await preferences.prepareLocalPlaylists(local.songs, replacements: local.duplicateReplacements) }
             }
-        }
-        .onChange(of: phase) { _, value in
-            if value == .active { Task { await synchronizeFavorites() }; player.publishWidgetSnapshot(force: true) }
-        }
-        .onChange(of: automaticDockActive) { _, active in if !active { dockDismissed = false } }
-        .onChange(of: layout.isLandscape) { _, landscape in if !landscape { manualDock = false } }
-        .onReceive(local.$songs) { songs in player.publishWidgetLibrary(localCount: songs.count, favoritesCount: preferences.state.favorites.count, playlistsCount: preferences.state.visiblePlaylists.count); publishWidgetCatalog() }
-        .onReceive(preferences.$state) { state in player.publishWidgetLibrary(localCount: local.songs.count, favoritesCount: state.favorites.count, playlistsCount: state.visiblePlaylists.count) }
-        .onChange(of: synchronizationServer) { _, _ in publishWidgetCatalog() }
-        .onChange(of: local.ready) { _, _ in publishWidgetCatalog() }
-        .onOpenURL { url in handleWidgetURL(url) }
-        .alert("No se pudo guardar el cambio", isPresented: Binding(get: { preferences.error != nil }, set: { if !$0 { preferences.error = nil } })) {
-            Button("Aceptar") { preferences.error = nil }
-        } message: { Text(preferences.error ?? "") }
-    }
-    private func publishWidgetCatalog() {
-        guard local.ready else { return }
-        let songs = local.songs.filter { !$0.hidden }.map { song in
-            WaveWidgetBrowserItem(id: song.id, title: song.name, subtitle: song.artist, kind: .song, playbackID: local.playable(song).id, folderPath: song.folder)
-        }
-        let folders = local.songs.filter { !$0.hidden }.map(\.folder)
-        let server = synchronizationServer
-        widgetCatalogTask?.cancel()
-        widgetCatalogTask = Task {
-            do {
-                try await WaveWidgetBrowserService.shared.configureServer(server)
-                try await WaveWidgetBrowserService.shared.publishLocal(songs, folders: folders)
-                WidgetCenter.shared.reloadAllTimelines()
-            } catch is CancellationError { }
-            catch { local.notice = "No se pudo actualizar la biblioteca del widget: " + error.localizedDescription }
-        }
-    }
-    private func handleWidgetURL(_ url: URL) {
-        guard let destination = WaveWidgetDestination(url: url) else { return }
-        switch destination {
-        case .player: Task { await player.restoreWidgetQueue(); expanded = true }
-        case .playlists: select(.playlists)
-        case .local: select(.local)
-        case .server: select(.server)
-        case .dock: manualDock = true
-        }
+            .alert("No se pudo guardar el cambio", isPresented: Binding(get: { preferences.error != nil }, set: { if !$0 { preferences.error = nil } })) {
+                Button("Aceptar") { preferences.error = nil }
+            } message: { Text(preferences.error ?? "") }
     }
     @ViewBuilder private var compactTabs: some View {
         #if compiler(>=6.2)
         if #available(iOS 26.0, *) {
             tabs(nativeAccessory: true)
                 .tabBarMinimizeBehavior(.onScrollDown)
-                .modifier(LiquidAccessoryModifier(expanded: $expanded, enabled: !layout.usesSidebar))
+                .modifier(LiquidAccessoryModifier(expanded: $expanded))
         } else { tabs(nativeAccessory: false) }
         #else
         tabs(nativeAccessory: false)
@@ -148,36 +102,25 @@ struct WaveHome: View {
                     .tabItem { Label(item.title, systemImage: item.icon) }
                     .tag(item)
             }
-        }.frame(maxWidth: .infinity, maxHeight: .infinity).background(WaveTheme.background)
-            .background(WaveTabReselectionObserver { expanded = false })
-    }
-
-    private func synchronizeFavorites() async {
-        guard let api = try? WaveAPI(server: synchronizationServer), preferences.ready else { return }
-        await preferences.synchronizeServer(api)
+        }
     }
 
     private func select(_ item: WaveSection) {
-        expanded = false
+        if section != item { expanded = false }
         section = item
     }
 
-    // The player belongs to the tab's content area, so the native tab bar
-    // keeps its own safe area and remains outside both player presentations.
+    // Preserve each library navigation stack while presenting the full player.
+    // The native tab bar owns its accessory and scroll animation.
     private func playerPage(_ item: WaveSection, nativeAccessory: Bool = false) -> some View {
-        ZStack {
-            content(item)
-                .allowsHitTesting(!(expanded && section == item))
-                .accessibilityHidden(expanded && section == item)
-            if expanded && section == item {
+        content(item)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if !nativeAccessory { PlayerBar(expanded: $expanded) }
+            }
+            .fullScreenCover(isPresented: Binding(get: { expanded && section == item }, set: { expanded = $0 })) {
                 ExpandedPlayer(onClose: { expanded = false })
             }
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if !expanded && (!nativeAccessory || layout.usesSidebar) { PlayerBar(expanded: $expanded) }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity).background(WaveTheme.background)
-        .toolbar(layout.usesSidebar ? .hidden : .visible, for: .tabBar)
+            .toolbar(.visible, for: .tabBar)
     }
 
     @ViewBuilder private func content(_ item: WaveSection) -> some View {
@@ -216,7 +159,7 @@ struct ServerLibraryView: View {
                 NavigationLink {
                     ServerFolderView(folder: WaveFolder(name: "Todas las canciones", count: total), api: api, allTracks: true)
                 } label: { FolderRow(name: "Todas las canciones", count: total) }.listRowBackground(WaveTheme.selected)
-                Section {
+                Section("Playlists · \(folders.count)") {
                     ForEach(folders.filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) }) { folder in
                         NavigationLink { ServerFolderView(folder: folder, api: api) } label: {
                             PlaylistRow(name: folder.name, count: folder.count, remoteCover: api.artworkURL(folder.coverUrl))
@@ -227,10 +170,10 @@ struct ServerLibraryView: View {
                                 }
                             }
                     }
-                } header: { WaveSectionHeader(title: "Playlists · \(folders.count)") }
+                }
             }
-        }.waveLibraryStyle()
-            .wavePage(title: "Servidor Wave", search: $search, prompt: "Buscar carpetas")
+        }.waveLibraryStyle().navigationTitle("").navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: "Servidor Wave", search: $search, prompt: "Buscar carpetas") }
             .refreshable { await load() }.task(id: server) { await load() }
             .toolbar { Button { Task { await load() } } label: { Image(systemName: "arrow.clockwise") }.disabled(loading).accessibilityLabel("Actualizar biblioteca") }
     }
@@ -267,8 +210,7 @@ struct ServerFolderView: View {
     @EnvironmentObject private var player: WavePlayer
     private var visible: [WaveTrack] { sort.sorted(tracks.filter { (advanced || !hidden.contains($0.id)) && (!favoritesOnly || preferences.liked(api.base.absoluteString + $0.id)) && (search.isEmpty || ($0.name + " " + $0.artist).localizedCaseInsensitiveContains(search)) }) }
     var body: some View {
-        let visible = self.visible
-        return List {
+        List {
             TrackTools(sort: $sort, advanced: $advanced).listRowBackground(Color.clear)
             if let first = visible.first(where: { !hidden.contains($0.id) }) {
                 Button { player.play(first, queue: visible.filter { !hidden.contains($0.id) }, api: api) } label: {
@@ -286,8 +228,7 @@ struct ServerFolderView: View {
                                 .opacity(hidden.contains(track.id) ? 0.5 : 1)
                         }.buttonStyle(.plain)
                         if let song = try? PlaybackSong.server(track, api: api) { LikeButton(song: song) }
-                    }.modifier(WaveServerSongMenu(track: track, tracks: visible, api: api))
-                        .listRowInsets(EdgeInsets()).listRowBackground(player.current?.id == api.base.absoluteString + track.id ? WaveTheme.selected : WaveTheme.surface)
+                    }.listRowBackground(player.current?.id == api.base.absoluteString + track.id ? WaveTheme.selected : WaveTheme.surface)
                         .swipeActions {
                             Button(hidden.contains(track.id) ? "Mostrar" : "Ocultar") { Task { await setHidden(track) } }.tint(WaveTheme.accent).disabled(saving)
                         }.moveDisabled(sort != .manual || !search.isEmpty || saving || favoritesOnly)
@@ -300,8 +241,8 @@ struct ServerFolderView: View {
                     Task { await saveOrder(paths) }
                 }
             }
-        }.waveLibraryStyle()
-            .wavePage(title: folder.name, search: $search, prompt: "Canción o artista")
+        }.waveLibraryStyle().navigationTitle("").navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: folder.name, search: $search, prompt: "Canción o artista") }
             .task { await load(); await preferences.load(); await preferences.synchronizeServer(api) }
             .refreshable { await load(); await preferences.synchronizeServer(api) }
             .toolbar {
@@ -360,7 +301,9 @@ struct LocalLibraryView: View {
     private var visibleFolders: [String] {
         folders.filter { folder in
             (search.isEmpty || folder.localizedCaseInsensitiveContains(search)) &&
-            (!likedOnly || local.songs(in: folder, recursive: true).contains { local.liked($0, in: preferences) })
+            (!likedOnly || local.songs.contains {
+                ($0.folder == folder || $0.folder.hasPrefix(folder + "/")) && !$0.hidden && preferences.liked("local:" + $0.id)
+            })
         }.sorted { descending ? $0.localizedStandardCompare($1) == .orderedDescending : $0.localizedStandardCompare($1) == .orderedAscending }
     }
     var body: some View {
@@ -373,10 +316,9 @@ struct LocalLibraryView: View {
             } label: { Text("Añadir").font(.headline) }.listRowBackground(WaveTheme.surface)
             if local.importing { ProgressView("Importando música…").listRowBackground(Color.clear) }
             if let notice = local.notice { Text(notice).font(.caption).foregroundStyle(WaveTheme.secondary).textSelection(.enabled).listRowBackground(Color.clear) }
-            CloudLibrarySection()
             DiscoverSection().listRowBackground(Color.clear)
             NavigationLink { LocalTracksView() } label: { FolderRow(name: "Todas las canciones", count: local.songs.filter { !$0.hidden }.count) }.listRowBackground(WaveTheme.selected)
-            Section {
+            Section("Mis playlist · \(visibleFolders.count)") {
                 HStack {
                     Menu {
                         Picker("Ordenar por", selection: $descending) { Text("Nombre A–Z").tag(false); Text("Nombre Z–A").tag(true) }
@@ -396,12 +338,12 @@ struct LocalLibraryView: View {
                             }
                         }
                 }
-            } header: { WaveSectionHeader(title: "Mis playlist · \(visibleFolders.count)") }
+            }
             Section("Música de tu dispositivo") {
                 NavigationLink { DeviceMusicLibraryView() } label: { PlaylistRow(name: "Biblioteca de Música", count: device.authorization == .authorized ? device.songs.count : nil, subtitle: "Canciones, álbumes y playlists") }.listRowBackground(WaveTheme.surface)
             }
-        }.waveLibraryStyle()
-            .wavePage(title: WaveSection.local.title, search: $search, prompt: "Buscar playlists")
+        }.waveLibraryStyle().navigationTitle("").navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: WaveSection.local.title, search: $search, prompt: "Buscar playlists") }
             .task { device.reload() }
             .fileImporter(isPresented: $importer, allowedContentTypes: importingFolder ? [.folder] : [.audio], allowsMultipleSelection: true) { result in
                 switch result {
@@ -429,13 +371,9 @@ struct LocalTracksView: View {
     @State private var sort: TrackSort = .manual
     @State private var advanced = false
     @State private var likedOnly = false
-    // true whenever we must look past this exact folder into its subfolders —
-    // shared with Descubre's own folder scan so a heart saved there always
-    // surfaces here too.
-    private var recursive: Bool { includeSubfolders || favoritesOnly || likedOnly }
     private var children: [String] {
         guard let folder else { return [] }
-        let candidates = local.songs(in: nil, recursive: true, advanced: advanced).filter { !(favoritesOnly || likedOnly) || local.liked($0, in: preferences) }
+        let candidates = local.songs.filter { (advanced || !$0.hidden) && (!(favoritesOnly || likedOnly) || preferences.liked("local:" + $0.id)) }
         let folders = LocalSong.childFolders(in: folder, songs: candidates).filter { child in
             search.isEmpty || child.localizedCaseInsensitiveContains(search) || candidates.contains {
                 ($0.folder == child || $0.folder.hasPrefix(child + "/")) && ($0.name + " " + $0.artist).localizedCaseInsensitiveContains(search)
@@ -444,8 +382,9 @@ struct LocalTracksView: View {
         return sort == .nameDescending ? Array(folders.reversed()) : folders
     }
     private var visible: [LocalSong] {
-        let songs = local.songs(in: folder, recursive: recursive, advanced: advanced).filter { song in
-            (!(favoritesOnly || likedOnly) || local.liked(song, in: preferences)) && (search.isEmpty || (song.name + " " + song.artist).localizedCaseInsensitiveContains(search))
+        let songs = local.songs.filter { song in
+            let matchesFolder = folder.map { song.folder == $0 || (includeSubfolders && song.folder.hasPrefix($0 + "/")) } ?? true
+            return matchesFolder && (advanced || !song.hidden) && (!(favoritesOnly || likedOnly) || preferences.liked("local:" + song.id)) && (search.isEmpty || (song.name + " " + song.artist).localizedCaseInsensitiveContains(search))
         }
         switch sort {
         case .manual: return songs
@@ -456,9 +395,7 @@ struct LocalTracksView: View {
         }
     }
     var body: some View {
-        let visible = self.visible
-        let children = self.children
-        return List {
+        List {
             TrackTools(sort: $sort, advanced: $advanced).listRowBackground(Color.clear)
             if !favoritesOnly {
                 Toggle("Solo favoritas", isOn: $likedOnly).listRowBackground(Color.clear)
@@ -469,14 +406,14 @@ struct LocalTracksView: View {
                 }.listRowBackground(WaveTheme.selected)
             }
             if !children.isEmpty {
-                Section {
+                Section("Carpetas") {
                     ForEach(children, id: \.self) { child in
                         NavigationLink {
                             LocalTracksView(folder: child, playlistTitle: child.split(separator: "/").last.map(String.init) ?? child)
                         } label: { LocalPlaylistRow(folder: child) }
                             .listRowBackground(WaveTheme.surface)
                     }
-                } header: { WaveSectionHeader(title: "Carpetas") }
+                }
             }
             if visible.isEmpty && children.isEmpty { WaveMessage(title: "No hay canciones visibles.", detail: "Importa música o usa la vista Avanzada para ver canciones ocultas.").listRowBackground(Color.clear) }
             Section("\(visible.count) canciones") {
@@ -484,11 +421,10 @@ struct LocalTracksView: View {
                     HStack(spacing: 0) {
                         Button {
                             player.play(local.playable(song), queue: visible.filter { !$0.hidden || $0.id == song.id }.map { local.playable($0) })
-                        } label: { TrackRow(track: song.track, active: player.current?.id == local.playable(song).id, advanced: advanced, audioURL: local.playable(song).url, folder: song.folder).opacity(song.hidden ? 0.5 : 1) }
+                        } label: { TrackRow(track: song.track, active: player.current?.id == "local:" + song.id, advanced: advanced, audioURL: local.playable(song).url).opacity(song.hidden ? 0.5 : 1) }
                             .buttonStyle(.plain)
                         LikeButton(song: local.playable(song))
-                    }.modifier(WaveSongMenu(song: local.playable(song), playQueue: { visible.map { local.playable($0) } }))
-                        .listRowInsets(EdgeInsets()).listRowBackground(player.current?.id == local.playable(song).id ? WaveTheme.selected : WaveTheme.surface)
+                    }.listRowBackground(player.current?.id == "local:" + song.id ? WaveTheme.selected : WaveTheme.surface)
                         .swipeActions { Button(song.hidden ? "Mostrar" : "Ocultar") { Task { await local.setHidden(song.id, hidden: !song.hidden) } }.tint(WaveTheme.accent).disabled(local.importing) }
                         .moveDisabled(sort != .manual || !search.isEmpty || local.importing || favoritesOnly || likedOnly)
                 }
@@ -498,8 +434,8 @@ struct LocalTracksView: View {
                     Task { await local.reorder(reordered.map(\.id)) }
                 }
             }
-        }.waveLibraryStyle()
-            .wavePage(title: favoritesOnly ? "Me gusta" : playlistTitle ?? folder ?? "Todas las canciones", search: $search, prompt: "Carpeta, canción o artista")
+        }.waveLibraryStyle().navigationTitle("").navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: favoritesOnly ? "Me gusta" : playlistTitle ?? folder ?? "Todas las canciones", search: $search, prompt: "Carpeta, canción o artista") }
             .toolbar {
                 if let folder {
                     if !preferences.state.playlists.contains(where: { $0.source == .local && $0.folder == folder }) {
@@ -513,18 +449,14 @@ struct LocalTracksView: View {
 }
 
 struct WaveSettingsView: View {
-    @AppStorage("wave.dock.dimWhenIdle") private var dimWhenIdle = true
-    @AppStorage("wave.dock.automatic") private var automaticDock = true
     @AppStorage("wave.appearance") private var appearance = WaveAppearance.system.rawValue
     @AppStorage("wave.accent") private var accent = WaveAccent.system.rawValue
-    @AppStorage("wave.liquidGlass") private var liquidGlass = true
     @AppStorage("wave.server") private var server = "https://tulopetas.duckdns.org/wave/"
     @State private var draft = ""
     @State private var notice: String?
     var body: some View {
         Form {
             Section("Apariencia") {
-                Toggle("Liquid Glass y animación del reproductor", isOn: $liquidGlass)
                 Picker("Modo", selection: $appearance) { ForEach(WaveAppearance.allCases, id: \.self) { Text($0.rawValue).tag($0.rawValue) } }
                 Picker("Color", selection: $accent) { ForEach(WaveAccent.allCases, id: \.self) { Text($0.rawValue).tag($0.rawValue) } }
                 Text("Sistema sigue el modo claro u oscuro del iPhone y usa los colores nativos de iOS.").font(.caption).foregroundStyle(WaveTheme.secondary)
@@ -537,23 +469,15 @@ struct WaveSettingsView: View {
                 }
                 if let notice { Text(notice).font(.caption) }
             }.listRowBackground(WaveTheme.surface)
-            Section("Horizontal y En reposo") {
-                Toggle("En reposo al cargar en horizontal", isOn: $automaticDock)
-                Toggle("Atenuar tras 20 segundos sin tocar", isOn: $dimWhenIdle)
-                Text("Toca la pantalla para iluminarla. La atenuación sólo afecta a la vista de Wave.").font(.caption).foregroundStyle(WaveTheme.secondary)
-                Text("El menú aparece a la izquierda al girar el dispositivo. La vista En reposo de Wave muestra reloj y música mientras la app está abierta.").font(.caption).foregroundStyle(WaveTheme.secondary)
-                if !WaveWidgetStore.available { Text("Los widgets no están conectados. Revisa las instrucciones de instalación de esta versión.").font(.caption).foregroundStyle(WaveTheme.secondary) }
-                Text("Los widgets Elegir canción y Reproduciendo permiten seleccionar música y controlarla desde Inicio o En reposo de iOS. El widget grande Biblioteca y reproductor reúne ambos.").font(.caption).foregroundStyle(WaveTheme.secondary)
-            }.listRowBackground(WaveTheme.surface)
             Section("Música local") {
                 Text("En Mi iPhone o Mi iPad puedes abrir tu biblioteca de Música o importar archivos desde Archivos.")
                 Text("Los originales permanecen en su ubicación. Las copias importadas ocupan espacio en este dispositivo.")
             }.font(.subheadline).foregroundStyle(WaveTheme.secondary).listRowBackground(WaveTheme.surface)
-            Section("Wave para iOS · 0.12.0") {
+            Section("Wave para iOS · 0.6.2") {
                 Text("Servidor, archivos locales y biblioteca de Música del dispositivo.")
                 Text("Versión instalada: \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—") · build \(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—")").font(.caption.monospacedDigit())
             }.font(.caption).listRowBackground(WaveTheme.surface)
-        }.waveLibraryStyle()
-            .wavePage(title: "Ajustes").onAppear { draft = server }
+        }.waveLibraryStyle().navigationTitle("").navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) { WavePageHeader(title: "Ajustes") }.onAppear { draft = server }
     }
 }
