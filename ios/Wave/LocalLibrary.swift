@@ -97,8 +97,46 @@ actor LocalLibraryStorage {
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
         var hash = SHA256()
-        while let data = try handle.read(upToCount: 1_048_576), !data.isEmpty { hash.update(data: data) }
+        while true {
+            var reachedEnd = false
+            try autoreleasepool {
+                guard let data = try handle.read(upToCount: 1_048_576), !data.isEmpty else {
+                    reachedEnd = true
+                    return
+                }
+                hash.update(data: data)
+            }
+            if reachedEnd { break }
+        }
         return hash.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func audioFiles(in selected: URL) throws -> (files: [(URL, String)], failures: [String]) {
+        var failures: [String] = []
+        guard let enumerator = manager.enumerator(
+            at: selected,
+            includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey],
+            options: [.skipsHiddenFiles],
+            errorHandler: { url, _ in
+                failures.append("No se pudo leer \(url.lastPathComponent).")
+                return true
+            }
+        ) else {
+            throw WaveAPI.Failure(message: "No se pudo abrir la carpeta.")
+        }
+
+        var files: [(URL, String)] = []
+        for case let file as URL in enumerator {
+            let attributes = try file.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+            guard attributes.isRegularFile == true,
+                  attributes.isSymbolicLink != true,
+                  Self.extensions.contains(file.pathExtension.lowercased()) else { continue }
+            let parent = file.deletingLastPathComponent().path
+            let suffix = String(parent.dropFirst(selected.path.count))
+                .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            files.append((file, selected.lastPathComponent + (suffix.isEmpty ? "" : "/" + suffix)))
+        }
+        return (files, failures)
     }
 
     // Preserve every audio file and a recoverable manifest before hiding duplicates.
@@ -148,18 +186,9 @@ actor LocalLibraryStorage {
                 let directory = try selected.resourceValues(forKeys: [.isDirectoryKey]).isDirectory == true
                 var files: [(URL, String)] = []
                 if directory {
-                    guard let enumerator = manager.enumerator(at: selected, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey], options: [.skipsHiddenFiles], errorHandler: { url, _ in
-                        failures.append("No se pudo leer \(url.lastPathComponent).")
-                        return true
-                    }) else { throw WaveAPI.Failure(message: "No se pudo abrir la carpeta.") }
-                    for case let file as URL in enumerator {
-                        let attributes = try file.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
-                        guard attributes.isRegularFile == true, attributes.isSymbolicLink != true,
-                              Self.extensions.contains(file.pathExtension.lowercased()) else { continue }
-                        let parent = file.deletingLastPathComponent().path
-                        let suffix = String(parent.dropFirst(selected.path.count)).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-                        files.append((file, selected.lastPathComponent + (suffix.isEmpty ? "" : "/" + suffix)))
-                    }
+                    let result = try audioFiles(in: selected)
+                    files = result.files
+                    failures.append(contentsOf: result.failures)
                 } else { files = [(selected, "Importadas")] }
 
                 if directory {
